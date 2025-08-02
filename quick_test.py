@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EEG轨迹跟踪算法对比系统 - 快速测试脚本
-用于验证系统安装和基本功能
+Enhanced EEG Trajectory Tracking Algorithm Comparison System - Quick Test Script
+Validates system installation and basic functionality with English interface
 """
 
 import os
@@ -11,10 +11,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import logging
+import platform
+
+# Set matplotlib to English only
+plt.rcParams['font.family'] = 'DejaVu Sans'
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Liberation Sans']
 
 def test_dependencies():
-    """测试依赖库安装"""
-    print("🔍 测试依赖库安装...")
+    """Test dependency installation"""
+    print("🔍 Testing dependency installation...")
     
     required_packages = {
         'numpy': 'NumPy',
@@ -23,7 +28,9 @@ def test_dependencies():
         'sklearn': 'Scikit-learn',
         'cv2': 'OpenCV',
         'tqdm': 'tqdm',
-        'mne': 'MNE-Python'
+        'mne': 'MNE-Python',
+        'pandas': 'Pandas',
+        'seaborn': 'Seaborn'
     }
     
     missing_packages = []
@@ -36,56 +43,56 @@ def test_dependencies():
             print(f"  ✓ {name}")
         except ImportError:
             missing_packages.append(name)
-            print(f"  ❌ {name} - 未安装")
+            print(f"  ❌ {name} - Not installed")
     
-    print(f"\n安装状态: {len(installed_packages)}/{len(required_packages)} 个包已安装")
+    print(f"\nInstallation status: {len(installed_packages)}/{len(required_packages)} packages installed")
     
     if missing_packages:
-        print(f"\n❌ 缺少依赖: {', '.join(missing_packages)}")
-        print("请运行: pip install -r requirements.txt")
+        print(f"\n❌ Missing dependencies: {', '.join(missing_packages)}")
+        print("Please run: pip install -r requirements.txt")
         return False
     else:
-        print("✅ 所有依赖库已正确安装!")
+        print("✅ All dependencies correctly installed!")
         return True
 
 def test_tracker_factory():
-    """测试跟踪器工厂"""
-    print("\n🏭 测试跟踪器工厂...")
+    """Test tracker factory"""
+    print("\n🏭 Testing tracker factory...")
     
     try:
-        # 添加路径
+        # Add paths
         sys.path.append('trackers')
         sys.path.append('src')
         from trackers import TrackerFactory
         from config import Config
         
-        # 测试获取可用算法
+        # Test available algorithms
         algorithms = TrackerFactory.get_available_algorithms()
-        print(f"  ✓ 可用算法: {', '.join(algorithms)}")
+        print(f"  ✓ Available algorithms: {', '.join(algorithms)}")
         
-        # 测试创建跟踪器
+        # Test tracker creation
         success_count = 0
         for algorithm in algorithms:
             try:
                 tracker = TrackerFactory.create_tracker(algorithm, Config)
                 if tracker is not None:
-                    print(f"  ✓ {algorithm} 跟踪器创建成功")
+                    print(f"  ✓ {algorithm} tracker created successfully")
                     success_count += 1
                 else:
-                    print(f"  ❌ {algorithm} 跟踪器创建失败")
+                    print(f"  ❌ {algorithm} tracker creation failed")
             except Exception as e:
-                print(f"  ❌ {algorithm} 跟踪器创建异常: {e}")
+                print(f"  ❌ {algorithm} tracker creation exception: {e}")
         
-        print(f"\n跟踪器创建状态: {success_count}/{len(algorithms)} 个算法可用")
+        print(f"\nTracker creation status: {success_count}/{len(algorithms)} algorithms available")
         return success_count > 0
         
     except Exception as e:
-        print(f"  ❌ 跟踪器工厂测试失败: {e}")
+        print(f"  ❌ Tracker factory test failed: {e}")
         return False
 
 def test_synthetic_data():
-    """测试合成数据处理"""
-    print("\n🧪 测试合成数据处理...")
+    """Test synthetic data processing with enhanced algorithms"""
+    print("\n🧪 Testing synthetic data processing...")
     
     try:
         sys.path.append('src')
@@ -95,235 +102,429 @@ def test_synthetic_data():
         from trackers import TrackerFactory
         from config import Config
         
-        # 创建合成地形图数据
-        n_frames = 50
-        size = (64, 64)  # 使用较小尺寸以加快测试
+        # Create synthetic topography data
+        n_frames = 30  # Reduced for faster testing
+        size = (64, 64)  # Smaller size for speed
         
-        print(f"  🔧 生成 {n_frames} 帧 {size} 尺寸的合成地形图...")
+        print(f"  🔧 Generating {n_frames} frames of {size} synthetic topographies...")
         
-        # 创建简单的移动激活区域
+        # Create moving activation regions
         topographies = np.zeros((n_frames, size[0], size[1]))
         
         for i in range(n_frames):
-            # 创建移动的高斯激活
-            center_x = 20 + int(15 * np.sin(2 * np.pi * i / 30))
-            center_y = 20 + int(10 * np.cos(2 * np.pi * i / 20))
+            # Create moving Gaussian activation
+            center_x = 20 + int(15 * np.sin(2 * np.pi * i / 20))
+            center_y = 20 + int(10 * np.cos(2 * np.pi * i / 15))
             
             y, x = np.ogrid[:size[0], :size[1]]
-            activation = np.exp(-((x - center_x)**2 + (y - center_y)**2) / (2 * 5**2))
+            activation = np.exp(-((x - center_x)**2 + (y - center_y)**2) / (2 * 4**2))
             topographies[i] = activation
         
-        print("  ✓ 合成地形图生成完成")
+        print("  ✓ Synthetic topography generation complete")
         
-        # 测试跟踪算法
-        test_algorithms = ['greedy', 'hungarian']  # 测试主要算法
+        # Test tracking algorithms
+        test_algorithms = Config.COMPARISON_ALGORITHMS[:3]  # Test first 3 algorithms
+        
+        algorithm_results = {}
         
         for algorithm in test_algorithms:
             try:
-                print(f"  🎯 测试 {algorithm} 算法...")
+                print(f"  🎯 Testing {algorithm} algorithm...")
                 
                 tracker = TrackerFactory.create_tracker(algorithm, Config)
                 if tracker is None:
-                    print(f"    ❌ {algorithm} 跟踪器创建失败")
+                    print(f"    ❌ {algorithm} tracker creation failed")
                     continue
                 
+                import time
+                start_time = time.time()
                 result = tracker.track_sequence(topographies)
+                end_time = time.time()
                 
                 if result and 'trajectories' in result:
                     trajectories = result['trajectories']
                     metrics = result.get('metrics', {})
                     
-                    print(f"    ✓ {algorithm}: {len(trajectories)} 条轨迹")
-                    print(f"    ✓ 计算时间: {metrics.get('computation_time', 0):.3f}s")
+                    algorithm_results[algorithm] = {
+                        'trajectory_count': len(trajectories),
+                        'computation_time': end_time - start_time,
+                        'metrics': metrics
+                    }
+                    
+                    print(f"    ✓ {algorithm}: {len(trajectories)} trajectories detected")
+                    print(f"    ✓ Processing time: {end_time - start_time:.3f}s")
                     
                     if len(trajectories) > 0:
                         first_traj = list(trajectories.values())[0]
-                        print(f"    ✓ 轨迹长度: {first_traj['length']} 帧")
+                        print(f"    ✓ Trajectory length: {first_traj['length']} frames")
                 else:
-                    print(f"    ⚠️  {algorithm}: 未检测到轨迹")
+                    print(f"    ⚠️  {algorithm}: No trajectories detected")
+                    algorithm_results[algorithm] = {
+                        'trajectory_count': 0,
+                        'computation_time': end_time - start_time,
+                        'metrics': {}
+                    }
                 
             except Exception as e:
-                print(f"    ❌ {algorithm} 测试失败: {e}")
+                print(f"    ❌ {algorithm} test failed: {e}")
+                algorithm_results[algorithm] = {
+                    'trajectory_count': 0,
+                    'computation_time': 0,
+                    'error': str(e)
+                }
+        
+        # Display comparison results
+        if algorithm_results:
+            print(f"\n  📊 Algorithm Performance Comparison:")
+            print(f"  {'Algorithm':<12} {'Trajectories':<12} {'Time (s)':<10} {'Status'}")
+            print(f"  {'-'*50}")
+            
+            for alg, results in algorithm_results.items():
+                status = "✓ Pass" if results['trajectory_count'] > 0 else "⚠ No detection"
+                if 'error' in results:
+                    status = "❌ Error"
+                
+                print(f"  {alg:<12} {results['trajectory_count']:<12} {results['computation_time']:<10.3f} {status}")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ 合成数据测试失败: {e}")
+        print(f"  ❌ Synthetic data test failed: {e}")
         return False
 
-def test_visualization():
-    """测试可视化功能"""
-    print("\n🎨 测试可视化功能...")
+def test_enhanced_visualization():
+    """Test enhanced visualization functionality"""
+    print("\n🎨 Testing enhanced visualization functionality...")
     
     try:
-        # 测试matplotlib设置
+        # Test matplotlib setup
         import matplotlib
-        matplotlib.use('Agg')  # 使用非交互式后端
+        matplotlib.use('Agg')  # Use non-interactive backend
         
-        # 创建简单测试图
-        fig, ax = plt.subplots(figsize=(6, 4))
+        # Create comprehensive test plots
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        fig.suptitle('Enhanced EEG Trajectory Analysis - Visualization Test', fontsize=14, fontweight='bold')
         
-        # 测试中文字体
-        try:
-            ax.text(0.5, 0.7, '测试中文字体', ha='center', va='center', fontsize=14)
-            ax.text(0.5, 0.5, 'Test English Font', ha='center', va='center', fontsize=12)
-            chinese_support = True
-        except:
-            ax.text(0.5, 0.6, 'Font Test (English Only)', ha='center', va='center', fontsize=12)
-            chinese_support = False
+        # Test 1: Basic plotting with English labels
+        ax = axes[0, 0]
+        x = np.linspace(0, 10, 100)
+        y = np.sin(x)
+        ax.plot(x, y, 'b-', linewidth=2, label='Test Signal')
+        ax.set_title('Signal Processing Test')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Amplitude')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
         
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1)
-        ax.set_title('EEG Trajectory Analysis - Font Test')
-        ax.axis('off')
-        
-        # 保存测试图
-        test_dir = './test_results'
-        os.makedirs(test_dir, exist_ok=True)
-        
-        test_path = os.path.join(test_dir, 'font_test.png')
-        plt.savefig(test_path, dpi=150, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  ✓ 测试图保存至: {test_path}")
-        print(f"  {'✓' if chinese_support else '⚠️'} 中文字体支持: {'是' if chinese_support else '否'}")
-        
-        # 测试复杂可视化
-        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-        fig.suptitle('Algorithm Comparison Test Charts', fontsize=14)
-        
-        # 模拟数据
+        # Test 2: Algorithm comparison simulation
+        ax = axes[0, 1]
         algorithms = ['Greedy', 'Hungarian', 'Kalman', 'Overlap', 'Hybrid']
-        metrics = {
-            'trajectory_count': [4.2, 4.5, 3.8, 3.9, 4.3],
-            'computation_time': [0.15, 0.45, 0.25, 0.35, 0.55],
-            'trajectory_quality': [0.72, 0.85, 0.78, 0.74, 0.82],
-            'memory_usage': [50, 80, 65, 70, 95]
-        }
+        performance = [4.2, 4.8, 3.9, 4.1, 4.6]
+        colors = plt.cm.Set1(np.linspace(0, 1, len(algorithms)))
         
-        # 柱状图测试
-        for i, (metric, values) in enumerate(metrics.items()):
-            ax = axes[i//2, i%2]
-            bars = ax.bar(algorithms, values, alpha=0.7)
-            ax.set_title(metric.replace('_', ' ').title())
-            ax.tick_params(axis='x', rotation=45)
-            
-            # 添加数值标签
-            for bar, value in zip(bars, values):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                       f'{value:.2f}', ha='center', va='bottom', fontsize=8)
+        bars = ax.bar(algorithms, performance, color=colors, alpha=0.7)
+        ax.set_title('Algorithm Performance Comparison')
+        ax.set_ylabel('Average Trajectories')
+        ax.tick_params(axis='x', rotation=45)
+        
+        # Add value labels
+        for bar, perf in zip(bars, performance):
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
+                   f'{perf:.1f}', ha='center', va='bottom')
+        
+        # Test 3: Topography simulation
+        ax = axes[1, 0]
+        size = 64
+        x = np.linspace(-1, 1, size)
+        y = np.linspace(-1, 1, size)
+        X, Y = np.meshgrid(x, y)
+        Z = np.exp(-(X**2 + Y**2) / 0.3) * np.cos(3*X) * np.sin(3*Y)
+        
+        im = ax.imshow(Z, cmap='RdYlBu_r', origin='lower', extent=[-1, 1, -1, 1])
+        ax.set_title('EEG Topography Simulation')
+        ax.set_xlabel('X Position')
+        ax.set_ylabel('Y Position')
+        
+        # Add head outline
+        circle = plt.Circle((0, 0), 0.9, fill=False, color='black', linewidth=2)
+        ax.add_patch(circle)
+        
+        # Test 4: Trajectory visualization
+        ax = axes[1, 1]
+        
+        # Simulate trajectory data
+        t = np.linspace(0, 4*np.pi, 50)
+        traj1_x = 0.3 * np.cos(t) + 0.1 * np.sin(3*t)
+        traj1_y = 0.3 * np.sin(t) + 0.1 * np.cos(2*t)
+        traj2_x = -0.2 * np.cos(1.5*t) + 0.15 * np.sin(2*t)
+        traj2_y = 0.4 * np.sin(1.5*t) - 0.1 * np.cos(4*t)
+        
+        ax.plot(traj1_x, traj1_y, 'r-', linewidth=2, alpha=0.8, label='Trajectory 1')
+        ax.plot(traj2_x, traj2_y, 'b-', linewidth=2, alpha=0.8, label='Trajectory 2')
+        
+        # Mark start and end points
+        ax.scatter([traj1_x[0], traj2_x[0]], [traj1_y[0], traj2_y[0]], 
+                  c=['red', 'blue'], s=100, marker='o', label='Start', zorder=5)
+        ax.scatter([traj1_x[-1], traj2_x[-1]], [traj1_y[-1], traj2_y[-1]], 
+                  c=['red', 'blue'], s=100, marker='s', label='End', zorder=5)
+        
+        ax.set_title('Trajectory Tracking Simulation')
+        ax.set_xlabel('X Coordinate')
+        ax.set_ylabel('Y Coordinate')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        ax.set_aspect('equal')
         
         plt.tight_layout()
         
-        chart_path = os.path.join(test_dir, 'comparison_charts_test.png')
-        plt.savefig(chart_path, dpi=150, bbox_inches='tight')
+        # Save test plots
+        test_dir = './test_results'
+        os.makedirs(test_dir, exist_ok=True)
+        
+        main_test_path = os.path.join(test_dir, 'enhanced_visualization_test.png')
+        plt.savefig(main_test_path, dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"  ✓ 对比图表保存至: {chart_path}")
+        print(f"  ✓ Enhanced visualization test saved: {main_test_path}")
+        
+        # Test algorithm comparison visualization
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        # Simulate comprehensive algorithm comparison
+        metrics = {
+            'Trajectory Count': [4.2, 4.8, 3.9, 4.1, 4.6],
+            'Quality Score': [0.72, 0.85, 0.78, 0.74, 0.82],
+            'Processing Time': [0.15, 0.45, 0.25, 0.35, 0.55],
+            'Efficiency': [28, 11, 16, 12, 8]
+        }
+        
+        x = np.arange(len(algorithms))
+        width = 0.2
+        
+        for i, (metric, values) in enumerate(metrics.items()):
+            # Normalize values for comparison
+            if metric == 'Processing Time':
+                # Lower is better for time, so invert
+                norm_values = [1.0 - (v - min(values)) / (max(values) - min(values)) for v in values]
+            else:
+                norm_values = [(v - min(values)) / (max(values) - min(values)) for v in values]
+            
+            ax.bar(x + i * width, norm_values, width, label=metric, alpha=0.8)
+        
+        ax.set_title('Normalized Algorithm Performance Comparison', fontweight='bold')
+        ax.set_xlabel('Algorithms')
+        ax.set_ylabel('Normalized Performance (0-1)')
+        ax.set_xticks(x + width * 1.5)
+        ax.set_xticklabels(algorithms)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        
+        comparison_path = os.path.join(test_dir, 'algorithm_comparison_test.png')
+        plt.savefig(comparison_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"  ✓ Algorithm comparison test saved: {comparison_path}")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ 可视化测试失败: {e}")
+        print(f"  ❌ Enhanced visualization test failed: {e}")
         return False
 
 def test_config():
-    """测试配置文件"""
-    print("\n⚙️ 测试配置文件...")
+    """Test configuration file"""
+    print("\n⚙️ Testing configuration file...")
     
     try:
         from config import Config
         
-        # 测试基本配置
-        print(f"  ✓ 数据路径: {Config.DATA_ROOT}")
-        print(f"  ✓ 结果路径: {Config.RESULTS_ROOT}")
-        print(f"  ✓ 最大被试数: {Config.MAX_SUBJECTS}")
-        print(f"  ✓ 算法对比: {'启用' if Config.ENABLE_ALGORITHM_COMPARISON else '禁用'}")
-        print(f"  ✓ 对比算法: {', '.join(Config.COMPARISON_ALGORITHMS)}")
+        # Test basic configuration
+        print(f"  ✓ Data path: {Config.DATA_ROOT}")
+        print(f"  ✓ Results path: {Config.RESULTS_ROOT}")
+        print(f"  ✓ Max subjects: {Config.MAX_SUBJECTS}")
+        print(f"  ✓ Algorithm comparison: {'Enabled' if Config.ENABLE_ALGORITHM_COMPARISON else 'Disabled'}")
+        print(f"  ✓ Comparison algorithms: {', '.join(Config.COMPARISON_ALGORITHMS)}")
+        print(f"  ✓ Max frames per epoch: {Config.MAX_FRAMES_PER_EPOCH}")
         
-        # 测试配置方法
+        # Test configuration methods
         summary = Config.get_experiment_summary()
-        print(f"  ✓ 实验摘要: {summary['algorithms_count']} 种算法, {summary['total_subjects']} 个被试")
+        print(f"  ✓ Experiment summary: {summary['algorithms_count']} algorithms, {summary['total_subjects']} subjects")
         
-        # 测试算法配置
+        # Test algorithm configuration
         for algorithm in Config.COMPARISON_ALGORITHMS:
             alg_config = Config.get_algorithm_config(algorithm)
-            print(f"  ✓ {algorithm} 配置: {len(alg_config)} 个参数")
+            print(f"  ✓ {algorithm} config: {len(alg_config)} parameters")
+        
+        # Test frame control
+        frame_limit = Config.get_max_frames('epoch')
+        print(f"  ✓ Frame control: {frame_limit} frames/epoch limit")
         
         return True
         
     except Exception as e:
-        print(f"  ❌ 配置测试失败: {e}")
+        print(f"  ❌ Configuration test failed: {e}")
         return False
 
-def generate_test_report(results):
-    """生成测试报告"""
-    print("\n" + "="*60)
-    print("🎯 EEG轨迹跟踪系统 - 快速测试报告")
-    print("="*60)
-    print(f"测试时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+def generate_enhanced_test_report(results):
+    """Generate enhanced test report"""
+    print("\n" + "="*80)
+    print("🎯 ENHANCED EEG TRAJECTORY TRACKING SYSTEM - QUICK TEST REPORT")
+    print("="*80)
+    print(f"Test Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("")
     
     test_items = [
-        ('依赖库检查', results.get('dependencies', False)),
-        ('跟踪器工厂', results.get('tracker_factory', False)),
-        ('合成数据处理', results.get('synthetic_data', False)),
-        ('可视化功能', results.get('visualization', False)),
-        ('配置文件', results.get('config', False))
+        ('Dependency Installation', results.get('dependencies', False)),
+        ('Tracker Factory', results.get('tracker_factory', False)),
+        ('Synthetic Data Processing', results.get('synthetic_data', False)),
+        ('Enhanced Visualization', results.get('enhanced_visualization', False)),
+        ('Configuration System', results.get('config', False))
     ]
     
     passed_tests = sum(1 for _, result in test_items if result)
     total_tests = len(test_items)
     
-    print("测试项目:")
+    print("Test Results:")
     for item_name, passed in test_items:
-        status = "✅ 通过" if passed else "❌ 失败"
-        print(f"  {item_name}: {status}")
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"  {item_name:<25}: {status}")
     
-    print(f"\n总体结果: {passed_tests}/{total_tests} 项测试通过")
+    print(f"\nOverall Result: {passed_tests}/{total_tests} tests passed")
     
+    # Provide detailed feedback based on results
     if passed_tests == total_tests:
-        print("🎉 恭喜！系统安装完成，所有功能正常！")
-        print("\n下一步:")
-        print("  1. 准备您的EEG数据（参考README.md中的数据格式）")
-        print("  2. 运行: python main.py --subjects 3  (快速测试)")
-        print("  3. 运行: python main.py  (完整实验)")
-    elif passed_tests >= 3:
-        print("✅ 系统基本功能正常，可以开始使用！")
-        print("⚠️  部分功能可能受限，请检查失败的测试项。")
+        print("🎉 EXCELLENT! System is fully operational and ready for use!")
+        print("\nRecommended Next Steps:")
+        print("  1. Prepare your EEG data (see README.md for data format)")
+        print("  2. Quick test: python main.py --fast-mode")
+        print("  3. Full experiment: python main.py")
+        print("  4. View results in ./results/ directory")
+        
+    elif passed_tests >= 4:
+        print("✅ GOOD! System is functional with minor issues.")
+        print("⚠️  Some advanced features may have limitations.")
+        print("\nRecommended Next Steps:")
+        print("  1. Review failed tests and address issues if needed")
+        print("  2. Try quick test: python main.py --fast-mode")
+        print("  3. Check system logs for detailed error information")
+        
+    elif passed_tests >= 2:
+        print("⚠️  PARTIAL! Basic functionality works but issues detected.")
+        print("🔧 Some components need attention before full operation.")
+        print("\nRecommended Actions:")
+        print("  1. Fix failed dependency installations")
+        print("  2. Check Python version (requires 3.8+)")
+        print("  3. Verify system compatibility")
+        
     else:
-        print("❌ 系统存在严重问题，建议重新安装。")
-        print("\n建议:")
-        print("  1. 检查Python版本（需要3.8+）")
-        print("  2. 重新安装依赖: pip install -r requirements.txt")
-        print("  3. 检查系统兼容性")
+        print("❌ CRITICAL! Major system issues detected.")
+        print("🚨 System requires significant troubleshooting.")
+        print("\nRequired Actions:")
+        print("  1. Check Python version (requires 3.8+)")
+        print("  2. Reinstall dependencies: pip install -r requirements.txt")
+        print("  3. Verify system compatibility and permissions")
+        print("  4. Check installation logs for specific errors")
     
-    print("\n📁 测试文件保存在: ./test_results/")
-    print("📋 如需帮助，请查看README.md或联系维护者")
-    print("="*60)
+    print(f"\n📁 Test outputs saved in: ./test_results/")
+    
+    # System information
+    print(f"\nSystem Information:")
+    print(f"  • Python: {sys.version.split()[0]}")
+    
+    try:
+        import platform as plt_module
+        print(f"  • Platform: {plt_module.system().lower()}")
+        print(f"  • Architecture: {plt_module.machine()}")
+    except Exception as e:
+        print(f"  • Platform: {sys.platform}")
+        print(f"  • Architecture: Unknown")
+    
+    # Performance estimate
+    if passed_tests >= 4:
+        estimated_time = "2-5 minutes per subject" if passed_tests == total_tests else "3-8 minutes per subject"
+        print(f"  • Estimated processing time: {estimated_time}")
+        print(f"  • Recommended subjects for testing: 2-3")
+        print(f"  • Memory requirement: 2-4 GB for typical datasets")
+    
+    print("\n📋 For detailed help, documentation, and troubleshooting:")
+    print("   • Check README.md")
+    print("   • Review example configurations")
+    print("   • Examine log files in ./logs/")
+    print("="*80)
+
+def run_performance_benchmark():
+    """Run quick performance benchmark"""
+    print("\n⚡ Running performance benchmark...")
+    
+    try:
+        import time
+        
+        # Test computation performance
+        start_time = time.time()
+        
+        # Matrix operations test
+        size = 1000
+        a = np.random.rand(size, size)
+        b = np.random.rand(size, size)
+        c = np.dot(a, b)
+        
+        matrix_time = time.time() - start_time
+        
+        # Memory allocation test
+        start_time = time.time()
+        large_array = np.zeros((2000, 2000, 10))
+        del large_array
+        
+        memory_time = time.time() - start_time
+        
+        print(f"  ✓ Matrix computation: {matrix_time:.3f}s")
+        print(f"  ✓ Memory allocation: {memory_time:.3f}s")
+        
+        # Performance assessment
+        if matrix_time < 0.5 and memory_time < 0.1:
+            performance = "Excellent"
+        elif matrix_time < 2.0 and memory_time < 0.5:
+            performance = "Good"
+        elif matrix_time < 5.0 and memory_time < 1.0:
+            performance = "Fair"
+        else:
+            performance = "Poor"
+        
+        print(f"  📊 Overall performance: {performance}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"  ❌ Performance benchmark failed: {e}")
+        return False
 
 def main():
-    """主测试函数"""
-    print("🚀 EEG轨迹跟踪算法对比系统 - 快速功能测试")
-    print("="*60)
-    print("此测试将验证系统安装和基本功能")
-    print("预计耗时: 1-2分钟")
+    """Main test function"""
+    print("🚀 ENHANCED EEG TRAJECTORY TRACKING ALGORITHM COMPARISON SYSTEM")
+    print("   Quick Functionality Test & System Validation")
+    print("="*80)
+    print("This test validates system installation and basic functionality")
+    print("Estimated time: 2-3 minutes")
     print("")
     
-    # 抑制部分日志
+    # Suppress some logging for cleaner output
     logging.getLogger().setLevel(logging.WARNING)
     
-    # 运行各项测试
+    # Run test suite
     results = {}
     
     results['dependencies'] = test_dependencies()
     results['config'] = test_config()
     results['tracker_factory'] = test_tracker_factory()
     results['synthetic_data'] = test_synthetic_data()
-    results['visualization'] = test_visualization()
+    results['enhanced_visualization'] = test_enhanced_visualization()
     
-    # 生成测试报告
-    generate_test_report(results)
+    # Optional performance benchmark
+    print("\n🎭 Additional Tests:")
+    results['performance'] = run_performance_benchmark()
+    
+    # Generate comprehensive test report
+    generate_enhanced_test_report(results)
     
     return 0 if all(results.values()) else 1
 

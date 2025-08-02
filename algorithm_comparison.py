@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EEG轨迹跟踪算法对比模块
-系统性评估和对比不同的跟踪算法性能
+Enhanced EEG Trajectory Tracking Algorithm Comparison Module
+Comprehensive evaluation and comparison of different tracking algorithms
 """
 
 import numpy as np
@@ -16,642 +16,555 @@ import time
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 import logging
+import os
 
-class TrackingAlgorithmComparison:
-    """跟踪算法对比类"""
+# Set matplotlib to use English fonts only
+plt.rcParams['font.family'] = 'DejaVu Sans'
+
+class EnhancedAlgorithmComparison:
+    """Enhanced algorithm comparison with better visualization and analysis"""
     
     def __init__(self, config):
         self.config = config
         self.logger = logging.getLogger(__name__)
         
-    def hungarian_matching(self, current_regions: List[Dict], 
-                          tracked_centers: np.ndarray,
-                          distance_threshold: float = 20.0) -> List[Tuple[int, int]]:
-        """匈牙利算法匹配"""
-        if not current_regions or len(tracked_centers) == 0:
-            return []
+    def calculate_comprehensive_metrics(self, algorithm_results: Dict) -> Dict:
+        """Calculate comprehensive performance metrics for each algorithm"""
+        comprehensive_metrics = {}
         
-        current_centers = np.array([r['center'] for r in current_regions])
-        distances = cdist(tracked_centers, current_centers)
-        
-        # 使用匈牙利算法求解最优分配
-        row_indices, col_indices = linear_sum_assignment(distances)
-        
-        matches = []
-        for row_idx, col_idx in zip(row_indices, col_indices):
-            if distances[row_idx, col_idx] < distance_threshold:
-                matches.append((row_idx, col_idx))
-        
-        return matches
-    
-    def greedy_matching(self, current_regions: List[Dict], 
-                       tracked_centers: np.ndarray,
-                       distance_threshold: float = 20.0) -> List[Tuple[int, int]]:
-        """贪婪算法匹配（当前使用的方法）"""
-        if not current_regions or len(tracked_centers) == 0:
-            return []
-        
-        current_centers = np.array([r['center'] for r in current_regions])
-        distances = cdist(tracked_centers, current_centers)
-        
-        matches = []
-        used_current = set()
-        used_tracked = set()
-        
-        dist_indices = np.unravel_index(np.argsort(distances.ravel()), distances.shape)
-        
-        for tracked_idx, current_idx in zip(dist_indices[0], dist_indices[1]):
-            if tracked_idx in used_tracked or current_idx in used_current:
-                continue
-            if distances[tracked_idx, current_idx] < distance_threshold:
-                matches.append((tracked_idx, current_idx))
-                used_tracked.add(tracked_idx)
-                used_current.add(current_idx)
-        
-        return matches
-    
-    def kalman_prediction_matching(self, current_regions: List[Dict],
-                                  tracked_regions: List,
-                                  distance_threshold: float = 20.0) -> List[Tuple[int, int]]:
-        """基于卡尔曼滤波预测的匹配"""
-        if not current_regions or not tracked_regions:
-            return []
-        
-        # 简化的卡尔曼预测：基于速度的线性预测
-        predicted_centers = []
-        for region in tracked_regions:
-            trajectory = region.trajectory
-            if len(trajectory) >= 2:
-                # 计算速度
-                velocity = np.array(trajectory[-1]) - np.array(trajectory[-2])
-                # 预测下一个位置
-                predicted_pos = np.array(trajectory[-1]) + velocity
-                predicted_centers.append(predicted_pos)
-            else:
-                predicted_centers.append(trajectory[-1])
-        
-        if not predicted_centers:
-            return []
-        
-        predicted_centers = np.array(predicted_centers)
-        current_centers = np.array([r['center'] for r in current_regions])
-        distances = cdist(predicted_centers, current_centers)
-        
-        # 使用匈牙利算法
-        row_indices, col_indices = linear_sum_assignment(distances)
-        
-        matches = []
-        for row_idx, col_idx in zip(row_indices, col_indices):
-            if distances[row_idx, col_idx] < distance_threshold:
-                matches.append((row_idx, col_idx))
-        
-        return matches
-    
-    def overlap_based_matching(self, current_regions: List[Dict],
-                              previous_regions: List[Dict],
-                              overlap_threshold: float = 0.3) -> List[Tuple[int, int]]:
-        """基于区域重叠的匹配"""
-        if not current_regions or not previous_regions:
-            return []
-        
-        matches = []
-        
-        for i, curr_region in enumerate(current_regions):
-            curr_mask = curr_region['mask']
-            best_match = -1
-            best_overlap = 0
-            
-            for j, prev_region in enumerate(previous_regions):
-                prev_mask = prev_region['mask']
-                
-                # 计算重叠率
-                intersection = np.sum(curr_mask & prev_mask)
-                union = np.sum(curr_mask | prev_mask)
-                
-                if union > 0:
-                    overlap = intersection / union
-                    if overlap > overlap_threshold and overlap > best_overlap:
-                        best_overlap = overlap
-                        best_match = j
-            
-            if best_match >= 0:
-                matches.append((best_match, i))
-        
-        return matches
-
-class SimilarityAlgorithmComparison:
-    """相似性算法对比类"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def dtw_distance(self, traj1: np.ndarray, traj2: np.ndarray) -> float:
-        """DTW距离"""
-        try:
-            from fastdtw import fastdtw
-            from scipy.spatial.distance import euclidean
-            distance, _ = fastdtw(traj1, traj2, dist=euclidean)
-            return distance
-        except ImportError:
-            return self.euclidean_distance(traj1, traj2)
-    
-    def euclidean_distance(self, traj1: np.ndarray, traj2: np.ndarray) -> float:
-        """欧几里得距离（插值对齐）"""
-        # 插值到相同长度
-        target_length = min(len(traj1), len(traj2), 50)
-        
-        if len(traj1) < 2 or len(traj2) < 2:
-            return np.linalg.norm(traj1[-1] - traj2[-1])
-        
-        from scipy.interpolate import interp1d
-        
-        # 插值
-        t1 = np.linspace(0, 1, len(traj1))
-        t2 = np.linspace(0, 1, len(traj2))
-        t_new = np.linspace(0, 1, target_length)
-        
-        interp1_x = interp1d(t1, traj1[:, 0], kind='linear')
-        interp1_y = interp1d(t1, traj1[:, 1], kind='linear')
-        interp2_x = interp1d(t2, traj2[:, 0], kind='linear')
-        interp2_y = interp1d(t2, traj2[:, 1], kind='linear')
-        
-        traj1_interp = np.column_stack([interp1_x(t_new), interp1_y(t_new)])
-        traj2_interp = np.column_stack([interp2_x(t_new), interp2_y(t_new)])
-        
-        return np.linalg.norm(traj1_interp - traj2_interp)
-    
-    def frechet_distance(self, traj1: np.ndarray, traj2: np.ndarray) -> float:
-        """简化的Fréchet距离"""
-        # 这里实现简化版本，完整版本需要更复杂的算法
-        return self.euclidean_distance(traj1, traj2)
-    
-    def hausdorff_distance(self, traj1: np.ndarray, traj2: np.ndarray) -> float:
-        """Hausdorff距离"""
-        # 计算有向Hausdorff距离
-        def directed_hausdorff(X, Y):
-            return max(min(np.linalg.norm(x - y) for y in Y) for x in X)
-        
-        return max(directed_hausdorff(traj1, traj2), directed_hausdorff(traj2, traj1))
-
-class ClusteringAlgorithmComparison:
-    """聚类算法对比类"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def compare_clustering_methods(self, features: np.ndarray, 
-                                  true_labels: Optional[np.ndarray] = None) -> Dict:
-        """对比不同聚类方法"""
-        results = {}
-        
-        # 确定聚类数量范围
-        n_samples = len(features)
-        max_clusters = min(n_samples // 2, 8)
-        
-        if max_clusters < 2:
-            return results
-        
-        # 1. K-means聚类
-        for n_clusters in range(2, max_clusters + 1):
-            try:
-                kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-                labels = kmeans.fit_predict(features)
-                
-                # 计算轮廓系数
-                if len(np.unique(labels)) > 1:
-                    silhouette = silhouette_score(features, labels)
-                else:
-                    silhouette = -1
-                
-                results[f'kmeans_k{n_clusters}'] = {
-                    'labels': labels,
-                    'silhouette_score': silhouette,
-                    'n_clusters': n_clusters,
-                    'method': 'kmeans'
-                }
-                
-                # 如果有真实标签，计算ARI
-                if true_labels is not None:
-                    ari = adjusted_rand_score(true_labels, labels)
-                    results[f'kmeans_k{n_clusters}']['ari'] = ari
-                    
-            except Exception as e:
-                self.logger.warning(f"K-means with k={n_clusters} failed: {e}")
-        
-        # 2. 层次聚类
-        for n_clusters in range(2, max_clusters + 1):
-            try:
-                agg_clustering = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
-                labels = agg_clustering.fit_predict(features)
-                
-                if len(np.unique(labels)) > 1:
-                    silhouette = silhouette_score(features, labels)
-                else:
-                    silhouette = -1
-                
-                results[f'hierarchical_k{n_clusters}'] = {
-                    'labels': labels,
-                    'silhouette_score': silhouette,
-                    'n_clusters': n_clusters,
-                    'method': 'hierarchical'
-                }
-                
-                if true_labels is not None:
-                    ari = adjusted_rand_score(true_labels, labels)
-                    results[f'hierarchical_k{n_clusters}']['ari'] = ari
-                    
-            except Exception as e:
-                self.logger.warning(f"Hierarchical clustering with k={n_clusters} failed: {e}")
-        
-        # 3. DBSCAN聚类
-        eps_values = [0.3, 0.5, 0.7, 1.0]
-        min_samples_values = [2, 3, 4]
-        
-        for eps in eps_values:
-            for min_samples in min_samples_values:
-                try:
-                    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-                    labels = dbscan.fit_predict(features)
-                    
-                    n_clusters = len(np.unique(labels[labels >= 0]))
-                    
-                    if n_clusters > 1:
-                        # 只对非噪声点计算轮廓系数
-                        mask = labels >= 0
-                        if np.sum(mask) > 1:
-                            silhouette = silhouette_score(features[mask], labels[mask])
-                        else:
-                            silhouette = -1
-                    else:
-                        silhouette = -1
-                    
-                    results[f'dbscan_eps{eps}_min{min_samples}'] = {
-                        'labels': labels,
-                        'silhouette_score': silhouette,
-                        'n_clusters': n_clusters,
-                        'eps': eps,
-                        'min_samples': min_samples,
-                        'method': 'dbscan',
-                        'n_noise': np.sum(labels == -1)
-                    }
-                    
-                    if true_labels is not None:
-                        ari = adjusted_rand_score(true_labels, labels)
-                        results[f'dbscan_eps{eps}_min{min_samples}']['ari'] = ari
-                        
-                except Exception as e:
-                    self.logger.warning(f"DBSCAN (eps={eps}, min_samples={min_samples}) failed: {e}")
-        
-        return results
-
-class AlgorithmBenchmark:
-    """算法性能基准测试"""
-    
-    def __init__(self, config):
-        self.config = config
-        self.tracking_comparison = TrackingAlgorithmComparison(config)
-        self.similarity_comparison = SimilarityAlgorithmComparison()
-        self.clustering_comparison = ClusteringAlgorithmComparison()
-        self.logger = logging.getLogger(__name__)
-    
-    def benchmark_tracking_algorithms(self, topographies: np.ndarray) -> Dict:
-        """基准测试跟踪算法"""
-        results = {
-            'hungarian': {'execution_times': [], 'match_counts': []},
-            'greedy': {'execution_times': [], 'match_counts': []},
-            'kalman': {'execution_times': [], 'match_counts': []},
-            'overlap': {'execution_times': [], 'match_counts': []}
-        }
-        
-        self.logger.info("开始跟踪算法基准测试...")
-        
-        # 模拟跟踪过程
-        for frame_idx in range(1, min(50, topographies.shape[0])):  # 限制帧数以节省时间
-            # 检测当前帧区域（使用简化的检测逻辑）
-            current_topo = topographies[frame_idx]
-            prev_topo = topographies[frame_idx - 1]
-            
-            # 简化的区域检测
-            threshold = np.percentile(current_topo[current_topo > 0], 90)
-            current_binary = current_topo > threshold
-            
-            threshold_prev = np.percentile(prev_topo[prev_topo > 0], 90)
-            prev_binary = prev_topo > threshold_prev
-            
-            # 模拟区域
-            current_regions = [{'center': (50, 50), 'mask': current_binary}]
-            prev_regions = [{'center': (48, 52), 'mask': prev_binary}]
-            tracked_centers = np.array([[48, 52]])
-            
-            # 测试不同算法
-            algorithms = {
-                'hungarian': lambda: self.tracking_comparison.hungarian_matching(
-                    current_regions, tracked_centers),
-                'greedy': lambda: self.tracking_comparison.greedy_matching(
-                    current_regions, tracked_centers),
-                'overlap': lambda: self.tracking_comparison.overlap_based_matching(
-                    current_regions, prev_regions)
+        for algorithm_name, results in algorithm_results.items():
+            metrics = {
+                'trajectory_count': [],
+                'computation_times': [],
+                'trajectory_lengths': [],
+                'quality_scores': [],
+                'frames_processed': [],
+                'efficiency_scores': [],
+                'stability_scores': []
             }
             
-            for alg_name, alg_func in algorithms.items():
-                try:
-                    start_time = time.time()
-                    matches = alg_func()
-                    end_time = time.time()
+            # Collect raw data
+            for session_data in results.values():
+                if isinstance(session_data, dict) and 'trajectories' in session_data:
+                    metrics['trajectory_count'].append(len(session_data['trajectories']))
+                    metrics['computation_times'].append(session_data.get('total_computation_time', 0))
+                    metrics['frames_processed'].append(session_data.get('total_frames_processed', 0))
                     
-                    results[alg_name]['execution_times'].append(end_time - start_time)
-                    results[alg_name]['match_counts'].append(len(matches))
-                except Exception as e:
-                    self.logger.warning(f"Algorithm {alg_name} failed on frame {frame_idx}: {e}")
+                    # Extract trajectory-level metrics
+                    for traj_data in session_data['trajectories'].values():
+                        metrics['trajectory_lengths'].append(traj_data.get('length', 0))
+                        metrics['quality_scores'].append(traj_data.get('quality_score', 0))
+                    
+                    # Calculate efficiency: trajectories per second
+                    time_taken = session_data.get('total_computation_time', 1e-6)
+                    traj_count = len(session_data['trajectories'])
+                    efficiency = traj_count / max(time_taken, 1e-6)
+                    metrics['efficiency_scores'].append(efficiency)
+            
+            # Calculate summary statistics
+            summary = {}
+            for metric_name, values in metrics.items():
+                if values:
+                    summary[f'avg_{metric_name}'] = np.mean(values)
+                    summary[f'std_{metric_name}'] = np.std(values)
+                    summary[f'min_{metric_name}'] = np.min(values)
+                    summary[f'max_{metric_name}'] = np.max(values)
+                    summary[f'median_{metric_name}'] = np.median(values)
+                else:
+                    summary[f'avg_{metric_name}'] = 0
+                    summary[f'std_{metric_name}'] = 0
+                    summary[f'min_{metric_name}'] = 0
+                    summary[f'max_{metric_name}'] = 0
+                    summary[f'median_{metric_name}'] = 0
+            
+            # Calculate composite performance score
+            traj_score = min(1.0, summary['avg_trajectory_count'] / 5.0)
+            quality_score = summary['avg_quality_scores']
+            efficiency_score = min(1.0, summary['avg_efficiency_scores'] / 10.0)
+            stability_score = 1.0 / (1.0 + summary['std_computation_times'] / max(summary['avg_computation_times'], 1e-6))
+            
+            composite_score = (traj_score * 0.3 + quality_score * 0.3 + 
+                             efficiency_score * 0.25 + stability_score * 0.15)
+            
+            summary['composite_performance_score'] = composite_score
+            summary['raw_data'] = metrics
+            
+            comprehensive_metrics[algorithm_name] = summary
         
-        return results
+        return comprehensive_metrics
     
-    def benchmark_similarity_algorithms(self, trajectories: Dict) -> Dict:
-        """基准测试相似性算法"""
-        if len(trajectories) < 2:
-            return {}
-        
-        results = {
-            'dtw': {'execution_times': [], 'distances': []},
-            'euclidean': {'execution_times': [], 'distances': []},
-            'hausdorff': {'execution_times': [], 'distances': []}
-        }
-        
-        trajectory_list = list(trajectories.values())
-        
-        self.logger.info("开始相似性算法基准测试...")
-        
-        # 比较所有轨迹对
-        for i in range(min(10, len(trajectory_list))):  # 限制比较数量
-            for j in range(i + 1, min(10, len(trajectory_list))):
-                traj1 = trajectory_list[i]['trajectory']
-                traj2 = trajectory_list[j]['trajectory']
-                
-                if len(traj1) < 2 or len(traj2) < 2:
-                    continue
-                
-                # 测试不同相似性算法
-                algorithms = {
-                    'dtw': self.similarity_comparison.dtw_distance,
-                    'euclidean': self.similarity_comparison.euclidean_distance,
-                    'hausdorff': self.similarity_comparison.hausdorff_distance
-                }
-                
-                for alg_name, alg_func in algorithms.items():
-                    try:
-                        start_time = time.time()
-                        distance = alg_func(traj1, traj2)
-                        end_time = time.time()
-                        
-                        results[alg_name]['execution_times'].append(end_time - start_time)
-                        results[alg_name]['distances'].append(distance)
-                    except Exception as e:
-                        self.logger.warning(f"Similarity algorithm {alg_name} failed: {e}")
-        
-        return results
-    
-    def generate_comparison_report(self, tracking_results: Dict, 
-                                 similarity_results: Dict,
-                                 clustering_results: Dict) -> str:
-        """生成算法对比报告"""
+    def generate_detailed_report(self, comprehensive_metrics: Dict) -> str:
+        """Generate detailed comparison report with actionable insights"""
         report = []
-        report.append("=" * 60)
-        report.append("EEG轨迹跟踪算法性能对比报告")
-        report.append("=" * 60)
+        report.append("=" * 80)
+        report.append("ENHANCED EEG TRAJECTORY TRACKING ALGORITHM COMPARISON REPORT")
+        report.append("=" * 80)
+        report.append(f"Analysis Date: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Algorithms Analyzed: {len(comprehensive_metrics)}")
         report.append("")
         
-        # 跟踪算法对比
-        if tracking_results:
-            report.append("1. 跟踪算法性能对比")
-            report.append("-" * 30)
-            
-            for alg_name, metrics in tracking_results.items():
-                if metrics['execution_times']:
-                    avg_time = np.mean(metrics['execution_times'])
-                    avg_matches = np.mean(metrics['match_counts'])
-                    
-                    report.append(f"{alg_name.upper()}算法:")
-                    report.append(f"  平均执行时间: {avg_time*1000:.3f} ms")
-                    report.append(f"  平均匹配数量: {avg_matches:.1f}")
-                    report.append("")
+        # Executive Summary
+        report.append("EXECUTIVE SUMMARY")
+        report.append("-" * 40)
         
-        # 相似性算法对比
-        if similarity_results:
-            report.append("2. 相似性算法性能对比")
-            report.append("-" * 30)
-            
-            for alg_name, metrics in similarity_results.items():
-                if metrics['execution_times']:
-                    avg_time = np.mean(metrics['execution_times'])
-                    avg_distance = np.mean(metrics['distances'])
-                    
-                    report.append(f"{alg_name.upper()}算法:")
-                    report.append(f"  平均执行时间: {avg_time*1000:.3f} ms")
-                    report.append(f"  平均距离: {avg_distance:.3f}")
-                    report.append("")
+        # Find best performers in each category
+        best_overall = max(comprehensive_metrics.items(), 
+                          key=lambda x: x[1]['composite_performance_score'])
+        best_speed = min(comprehensive_metrics.items(), 
+                        key=lambda x: x[1]['avg_computation_times'])
+        best_quality = max(comprehensive_metrics.items(), 
+                          key=lambda x: x[1]['avg_quality_scores'])
+        best_efficiency = max(comprehensive_metrics.items(), 
+                             key=lambda x: x[1]['avg_efficiency_scores'])
         
-        # 聚类算法对比
-        if clustering_results:
-            report.append("3. 聚类算法性能对比")
-            report.append("-" * 30)
-            
-            best_method = None
-            best_score = -1
-            
-            for method_name, result in clustering_results.items():
-                silhouette = result.get('silhouette_score', -1)
-                if silhouette > best_score:
-                    best_score = silhouette
-                    best_method = method_name
-                
-                report.append(f"{method_name}:")
-                report.append(f"  轮廓系数: {silhouette:.3f}")
-                report.append(f"  聚类数量: {result.get('n_clusters', 0)}")
-                
-                if 'ari' in result:
-                    report.append(f"  调整兰德指数: {result['ari']:.3f}")
-                
-                report.append("")
-            
-            if best_method:
-                report.append(f"推荐聚类方法: {best_method} (轮廓系数: {best_score:.3f})")
-                report.append("")
-        
-        report.append("4. 算法选择建议")
-        report.append("-" * 30)
-        report.append("• 实时应用: 选择执行时间最短的算法")
-        report.append("• 精度优先: 选择匹配质量最好的算法")
-        report.append("• 平衡方案: 在性能和精度间找到最佳平衡")
+        report.append(f"• Best Overall Performance: {best_overall[0].upper()} "
+                     f"(Score: {best_overall[1]['composite_performance_score']:.3f})")
+        report.append(f"• Fastest Algorithm: {best_speed[0].upper()} "
+                     f"({best_speed[1]['avg_computation_times']:.4f}s avg)")
+        report.append(f"• Highest Quality: {best_quality[0].upper()} "
+                     f"(Score: {best_quality[1]['avg_quality_scores']:.3f})")
+        report.append(f"• Most Efficient: {best_efficiency[0].upper()} "
+                     f"({best_efficiency[1]['avg_efficiency_scores']:.1f} traj/s)")
         report.append("")
+        
+        # Detailed Algorithm Analysis
+        report.append("DETAILED ALGORITHM ANALYSIS")
+        report.append("-" * 50)
+        
+        for algorithm_name, metrics in comprehensive_metrics.items():
+            report.append(f"\n{algorithm_name.upper()} ALGORITHM:")
+            report.append("=" * (len(algorithm_name) + 11))
+            
+            # Performance Metrics
+            report.append("Performance Metrics:")
+            report.append(f"  • Average Trajectories Detected: {metrics['avg_trajectory_count']:.2f} ± {metrics['std_trajectory_count']:.2f}")
+            report.append(f"  • Average Computation Time: {metrics['avg_computation_times']:.4f}s ± {metrics['std_computation_times']:.4f}s")
+            report.append(f"  • Average Trajectory Quality: {metrics['avg_quality_scores']:.3f} ± {metrics['std_quality_scores']:.3f}")
+            report.append(f"  • Average Trajectory Length: {metrics['avg_trajectory_lengths']:.1f} ± {metrics['std_trajectory_lengths']:.1f} frames")
+            report.append(f"  • Processing Efficiency: {metrics['avg_efficiency_scores']:.1f} trajectories/second")
+            report.append(f"  • Composite Performance Score: {metrics['composite_performance_score']:.3f}")
+            
+            # Reliability Metrics
+            report.append("\nReliability Analysis:")
+            cv_time = metrics['std_computation_times'] / max(metrics['avg_computation_times'], 1e-6)
+            cv_quality = metrics['std_quality_scores'] / max(metrics['avg_quality_scores'], 1e-6)
+            
+            report.append(f"  • Time Consistency (CV): {cv_time:.3f} {'(Excellent)' if cv_time < 0.1 else '(Good)' if cv_time < 0.3 else '(Poor)'}")
+            report.append(f"  • Quality Consistency (CV): {cv_quality:.3f} {'(Excellent)' if cv_quality < 0.1 else '(Good)' if cv_quality < 0.3 else '(Poor)'}")
+            
+            # Performance Range
+            report.append("\nPerformance Range:")
+            report.append(f"  • Trajectory Count Range: {metrics['min_trajectory_count']:.0f} - {metrics['max_trajectory_count']:.0f}")
+            report.append(f"  • Time Range: {metrics['min_computation_times']:.4f}s - {metrics['max_computation_times']:.4f}s")
+            report.append(f"  • Quality Range: {metrics['min_quality_scores']:.3f} - {metrics['max_quality_scores']:.3f}")
+        
+        # Comparative Analysis
+        report.append("\n\nCOMPARATIVE ANALYSIS")
+        report.append("-" * 50)
+        
+        # Statistical significance (simplified)
+        report.append("Performance Ranking by Category:")
+        
+        categories = [
+            ('Overall Performance', 'composite_performance_score'),
+            ('Speed', 'avg_computation_times', True),  # Lower is better
+            ('Quality', 'avg_quality_scores'),
+            ('Efficiency', 'avg_efficiency_scores'),
+            ('Trajectory Count', 'avg_trajectory_count')
+        ]
+        
+        for category_name, metric_key, *reverse in categories:
+            is_reverse = len(reverse) > 0 and reverse[0]
+            sorted_algorithms = sorted(comprehensive_metrics.items(), 
+                                     key=lambda x: x[1][metric_key], 
+                                     reverse=not is_reverse)
+            
+            report.append(f"\n{category_name}:")
+            for i, (alg_name, metrics) in enumerate(sorted_algorithms, 1):
+                value = metrics[metric_key]
+                if 'time' in metric_key:
+                    report.append(f"  {i}. {alg_name.upper()}: {value:.4f}s")
+                elif 'score' in metric_key:
+                    report.append(f"  {i}. {alg_name.upper()}: {value:.3f}")
+                else:
+                    report.append(f"  {i}. {alg_name.upper()}: {value:.2f}")
+        
+        # Recommendations
+        report.append("\n\nRECOMMENDATIONS")
+        report.append("-" * 40)
+        
+        report.append("Use Case Recommendations:")
+        report.append("• Real-time Processing: Choose the fastest algorithm with acceptable quality")
+        report.append("• High-precision Analysis: Choose the highest quality algorithm")
+        report.append("• Resource-constrained Environments: Choose the most efficient algorithm")
+        report.append("• Batch Processing: Choose the best overall performance algorithm")
+        
+        report.append("\nSpecific Recommendations:")
+        for alg_name, metrics in comprehensive_metrics.items():
+            score = metrics['composite_performance_score']
+            speed = metrics['avg_computation_times']
+            quality = metrics['avg_quality_scores']
+            
+            if score > 0.7:
+                recommendation = "Excellent for most applications"
+            elif speed < 0.1 and quality > 0.6:
+                recommendation = "Good for real-time applications"
+            elif quality > 0.8:
+                recommendation = "Ideal for high-precision tasks"
+            elif metrics['avg_efficiency_scores'] > 15:
+                recommendation = "Best for high-throughput scenarios"
+            else:
+                recommendation = "Suitable for basic applications"
+            
+            report.append(f"• {alg_name.upper()}: {recommendation}")
+        
+        # Technical Notes
+        report.append("\n\nTECHNICAL NOTES")
+        report.append("-" * 40)
+        report.append("• Performance scores are normalized to 0-1 scale")
+        report.append("• Composite score weights: Trajectories(30%), Quality(30%), Efficiency(25%), Stability(15%)")
+        report.append("• Coefficient of Variation (CV) indicates consistency: <0.1=Excellent, 0.1-0.3=Good, >0.3=Poor")
+        report.append("• Results may vary with different data characteristics and parameters")
         
         return "\n".join(report)
     
-    def visualize_comparison_results(self, results: Dict, save_path: str):
-        """可视化对比结果"""
-        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-        fig.suptitle('算法性能对比结果', fontsize=16, fontweight='bold')
+    def create_comprehensive_visualizations(self, comprehensive_metrics: Dict, 
+                                          save_dir: str, visualizer):
+        """Create comprehensive visualization suite"""
+        os.makedirs(save_dir, exist_ok=True)
         
-        # 跟踪算法执行时间对比
-        if 'tracking' in results:
+        # 1. Main comparison chart
+        main_comparison_path = os.path.join(save_dir, "main_algorithm_comparison.png")
+        visualizer.create_algorithm_comparison_plot(comprehensive_metrics, main_comparison_path)
+        
+        # 2. Performance radar chart  
+        radar_path = os.path.join(save_dir, "performance_radar_chart.png")
+        visualizer.create_performance_radar_chart(comprehensive_metrics, radar_path)
+        
+        # 3. Detailed comparison table
+        table_path = os.path.join(save_dir, "detailed_comparison_table.png")
+        visualizer.create_detailed_comparison_table(comprehensive_metrics, table_path)
+        
+        # 4. Statistical analysis plots
+        self._create_statistical_plots(comprehensive_metrics, save_dir)
+        
+        # 5. Performance trends
+        self._create_performance_trends(comprehensive_metrics, save_dir)
+        
+        self.logger.info(f"Comprehensive visualizations saved to {save_dir}")
+    
+    def _create_statistical_plots(self, comprehensive_metrics: Dict, save_dir: str):
+        """Create statistical analysis plots"""
+        try:
+            fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+            fig.suptitle('Statistical Performance Analysis', fontsize=16, fontweight='bold')
+            
+            algorithms = list(comprehensive_metrics.keys())
+            
+            # 1. Box plot for trajectory counts
             ax = axes[0, 0]
-            tracking_data = results['tracking']
+            traj_data = []
+            labels = []
             
-            alg_names = []
-            avg_times = []
+            for alg in algorithms:
+                raw_data = comprehensive_metrics[alg]['raw_data']
+                if raw_data['trajectory_count']:
+                    traj_data.append(raw_data['trajectory_count'])
+                    labels.append(alg)
             
-            for alg_name, metrics in tracking_data.items():
-                if metrics['execution_times']:
-                    alg_names.append(alg_name)
-                    avg_times.append(np.mean(metrics['execution_times']) * 1000)
-            
-            if alg_names:
-                bars = ax.bar(alg_names, avg_times, color='skyblue', alpha=0.7)
-                ax.set_title('跟踪算法执行时间对比')
-                ax.set_ylabel('平均执行时间 (ms)')
+            if traj_data:
+                bp = ax.boxplot(traj_data, labels=labels, patch_artist=True)
+                for patch, color in zip(bp['boxes'], plt.cm.Set1(np.linspace(0, 1, len(labels)))):
+                    patch.set_facecolor(color)
+                ax.set_title('Trajectory Count Distribution')
+                ax.set_ylabel('Number of Trajectories')
                 ax.tick_params(axis='x', rotation=45)
-                
-                # 添加数值标签
-                for bar, time in zip(bars, avg_times):
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                           f'{time:.2f}', ha='center', va='bottom')
-        
-        # 相似性算法对比
-        if 'similarity' in results:
+            
+            # 2. Computation time variability
             ax = axes[0, 1]
-            similarity_data = results['similarity']
+            time_data = []
+            time_labels = []
             
-            alg_names = []
-            avg_times = []
+            for alg in algorithms:
+                raw_data = comprehensive_metrics[alg]['raw_data']
+                if raw_data['computation_times']:
+                    time_data.append(raw_data['computation_times'])
+                    time_labels.append(alg)
             
-            for alg_name, metrics in similarity_data.items():
-                if metrics['execution_times']:
-                    alg_names.append(alg_name)
-                    avg_times.append(np.mean(metrics['execution_times']) * 1000)
-            
-            if alg_names:
-                bars = ax.bar(alg_names, avg_times, color='lightgreen', alpha=0.7)
-                ax.set_title('相似性算法执行时间对比')
-                ax.set_ylabel('平均执行时间 (ms)')
+            if time_data:
+                bp = ax.boxplot(time_data, labels=time_labels, patch_artist=True)
+                for patch, color in zip(bp['boxes'], plt.cm.Set1(np.linspace(0, 1, len(time_labels)))):
+                    patch.set_facecolor(color)
+                ax.set_title('Computation Time Distribution')
+                ax.set_ylabel('Time (seconds)')
                 ax.tick_params(axis='x', rotation=45)
-                
-                for bar, time in zip(bars, avg_times):
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                           f'{time:.2f}', ha='center', va='bottom')
-        
-        # 聚类算法轮廓系数对比
-        if 'clustering' in results:
+            
+            # 3. Quality score histogram
             ax = axes[1, 0]
-            clustering_data = results['clustering']
+            for i, alg in enumerate(algorithms):
+                raw_data = comprehensive_metrics[alg]['raw_data']
+                if raw_data['quality_scores']:
+                    ax.hist(raw_data['quality_scores'], alpha=0.7, 
+                           label=alg, bins=20, density=True)
             
-            methods = []
-            scores = []
+            ax.set_title('Quality Score Distribution')
+            ax.set_xlabel('Quality Score')
+            ax.set_ylabel('Density')
+            ax.legend()
             
-            for method_name, result in clustering_data.items():
-                if result.get('silhouette_score', -1) > -1:
-                    methods.append(method_name.replace('_', '\n'))
-                    scores.append(result['silhouette_score'])
+            # 4. Efficiency comparison
+            ax = axes[1, 1]
+            efficiencies = []
+            eff_labels = []
             
-            if methods:
-                bars = ax.bar(methods, scores, color='orange', alpha=0.7)
-                ax.set_title('聚类算法轮廓系数对比')
-                ax.set_ylabel('轮廓系数')
-                ax.tick_params(axis='x', rotation=45)
-                
-                for bar, score in zip(bars, scores):
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                           f'{score:.3f}', ha='center', va='bottom')
-        
-        # 综合性能雷达图
-        ax = axes[1, 1]
-        ax.text(0.5, 0.5, '综合性能评估\n(基于执行时间、精度、稳定性)', 
-                ha='center', va='center', fontsize=12,
-                bbox=dict(boxstyle='round,pad=0.5', facecolor='lightgray', alpha=0.5))
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1)
-        ax.axis('off')
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        plt.close()
-        
-        print(f"算法对比可视化结果已保存: {save_path}")
+            for alg in algorithms:
+                eff = comprehensive_metrics[alg]['avg_efficiency_scores']
+                efficiencies.append(eff)
+                eff_labels.append(alg)
+            
+            bars = ax.bar(eff_labels, efficiencies, 
+                         color=plt.cm.Set1(np.linspace(0, 1, len(eff_labels))), alpha=0.7)
+            ax.set_title('Processing Efficiency Comparison')
+            ax.set_ylabel('Trajectories per Second')
+            ax.tick_params(axis='x', rotation=45)
+            
+            # Add value labels on bars
+            for bar, eff in zip(bars, efficiencies):
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
+                       f'{eff:.1f}', ha='center', va='bottom')
+            
+            plt.tight_layout()
+            
+            save_path = os.path.join(save_dir, "statistical_analysis.png")
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            self.logger.info(f"Statistical plots saved to {save_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create statistical plots: {e}")
+            if 'fig' in locals():
+                plt.close(fig)
+    
+    def _create_performance_trends(self, comprehensive_metrics: Dict, save_dir: str):
+        """Create performance trend analysis"""
+        try:
+            fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+            fig.suptitle('Performance Trends Analysis', fontsize=16, fontweight='bold')
+            
+            algorithms = list(comprehensive_metrics.keys())
+            colors = plt.cm.Set1(np.linspace(0, 1, len(algorithms)))
+            
+            # 1. Performance vs Speed Trade-off
+            ax = axes[0, 0]
+            for i, alg in enumerate(algorithms):
+                metrics = comprehensive_metrics[alg]
+                x = metrics['avg_computation_times']
+                y = metrics['composite_performance_score']
+                ax.scatter(x, y, s=100, c=[colors[i]], alpha=0.7, label=alg)
+                ax.annotate(alg, (x, y), xytext=(5, 5), textcoords='offset points')
+            
+            ax.set_xlabel('Average Computation Time (s)')
+            ax.set_ylabel('Composite Performance Score')
+            ax.set_title('Performance vs Speed Trade-off')
+            ax.grid(True, alpha=0.3)
+            
+            # 2. Quality vs Efficiency
+            ax = axes[0, 1]
+            for i, alg in enumerate(algorithms):
+                metrics = comprehensive_metrics[alg]
+                x = metrics['avg_efficiency_scores']
+                y = metrics['avg_quality_scores']
+                ax.scatter(x, y, s=100, c=[colors[i]], alpha=0.7, label=alg)
+                ax.annotate(alg, (x, y), xytext=(5, 5), textcoords='offset points')
+            
+            ax.set_xlabel('Efficiency (trajectories/s)')
+            ax.set_ylabel('Average Quality Score')
+            ax.set_title('Quality vs Efficiency Trade-off')
+            ax.grid(True, alpha=0.3)
+            
+            # 3. Consistency Analysis
+            ax = axes[1, 0]
+            consistency_metrics = []
+            for alg in algorithms:
+                metrics = comprehensive_metrics[alg]
+                time_cv = metrics['std_computation_times'] / max(metrics['avg_computation_times'], 1e-6)
+                quality_cv = metrics['std_quality_scores'] / max(metrics['avg_quality_scores'], 1e-6)
+                consistency_score = 1.0 / (1.0 + time_cv + quality_cv)
+                consistency_metrics.append(consistency_score)
+            
+            bars = ax.bar(algorithms, consistency_metrics, color=colors, alpha=0.7)
+            ax.set_title('Algorithm Consistency Score')
+            ax.set_ylabel('Consistency Score (higher is better)')
+            ax.tick_params(axis='x', rotation=45)
+            
+            for bar, score in zip(bars, consistency_metrics):
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                       f'{score:.3f}', ha='center', va='bottom')
+            
+            # 4. Overall Ranking
+            ax = axes[1, 1]
+            ranking_categories = ['Speed', 'Quality', 'Efficiency', 'Consistency']
+            
+            # Calculate rankings for each category
+            speed_ranking = {alg: i+1 for i, (alg, _) in enumerate(
+                sorted(comprehensive_metrics.items(), key=lambda x: x[1]['avg_computation_times']))}
+            quality_ranking = {alg: i+1 for i, (alg, _) in enumerate(
+                sorted(comprehensive_metrics.items(), key=lambda x: x[1]['avg_quality_scores'], reverse=True))}
+            efficiency_ranking = {alg: i+1 for i, (alg, _) in enumerate(
+                sorted(comprehensive_metrics.items(), key=lambda x: x[1]['avg_efficiency_scores'], reverse=True))}
+            consistency_ranking = {alg: i+1 for i, (alg, score) in enumerate(
+                sorted(zip(algorithms, consistency_metrics), key=lambda x: x[1], reverse=True))}
+            
+            # Create heatmap data
+            ranking_data = []
+            for alg in algorithms:
+                ranking_data.append([
+                    speed_ranking[alg],
+                    quality_ranking[alg], 
+                    efficiency_ranking[alg],
+                    consistency_ranking[alg]
+                ])
+            
+            im = ax.imshow(ranking_data, cmap='RdYlGn_r', aspect='auto')
+            ax.set_xticks(range(len(ranking_categories)))
+            ax.set_xticklabels(ranking_categories)
+            ax.set_yticks(range(len(algorithms)))
+            ax.set_yticklabels(algorithms)
+            ax.set_title('Algorithm Ranking Heatmap (1=Best)')
+            
+            # Add text annotations
+            for i in range(len(algorithms)):
+                for j in range(len(ranking_categories)):
+                    text = ax.text(j, i, ranking_data[i][j], ha="center", va="center", color="black")
+            
+            plt.colorbar(im, ax=ax)
+            
+            plt.tight_layout()
+            
+            save_path = os.path.join(save_dir, "performance_trends.png")
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            self.logger.info(f"Performance trends saved to {save_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create performance trends: {e}")
+            if 'fig' in locals():
+                plt.close(fig)
+    
+    def export_results_to_csv(self, comprehensive_metrics: Dict, save_path: str):
+        """Export detailed results to CSV for further analysis"""
+        try:
+            data_rows = []
+            
+            for algorithm_name, metrics in comprehensive_metrics.items():
+                row = {
+                    'Algorithm': algorithm_name,
+                    'Avg_Trajectories': metrics['avg_trajectory_count'],
+                    'Std_Trajectories': metrics['std_trajectory_count'],
+                    'Avg_Computation_Time': metrics['avg_computation_times'],
+                    'Std_Computation_Time': metrics['std_computation_times'],
+                    'Avg_Quality': metrics['avg_quality_scores'],
+                    'Std_Quality': metrics['std_quality_scores'],
+                    'Avg_Length': metrics['avg_trajectory_lengths'],
+                    'Std_Length': metrics['std_trajectory_lengths'],
+                    'Avg_Efficiency': metrics['avg_efficiency_scores'],
+                    'Composite_Score': metrics['composite_performance_score'],
+                    'Min_Trajectories': metrics['min_trajectory_count'],
+                    'Max_Trajectories': metrics['max_trajectory_count'],
+                    'Min_Time': metrics['min_computation_times'],
+                    'Max_Time': metrics['max_computation_times'],
+                    'Min_Quality': metrics['min_quality_scores'],
+                    'Max_Quality': metrics['max_quality_scores']
+                }
+                data_rows.append(row)
+            
+            df = pd.DataFrame(data_rows)
+            df.to_csv(save_path, index=False)
+            
+            self.logger.info(f"Results exported to CSV: {save_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to export results to CSV: {e}")
 
-def run_algorithm_comparison(config, topographies, trajectories):
-    """运行完整的算法对比"""
-    benchmark = AlgorithmBenchmark(config)
+
+def run_enhanced_algorithm_comparison(config, all_results, visualizer):
+    """Run enhanced algorithm comparison with improved analysis"""
+    comparison = EnhancedAlgorithmComparison(config)
     
-    print("开始算法性能对比测试...")
+    print("\n" + "="*60)
+    print("Running Enhanced Algorithm Comparison Analysis...")
+    print("="*60)
     
-    # 1. 跟踪算法对比
-    tracking_results = benchmark.benchmark_tracking_algorithms(topographies)
-    
-    # 2. 相似性算法对比
-    similarity_results = benchmark.benchmark_similarity_algorithms(trajectories)
-    
-    # 3. 聚类算法对比（需要特征数据）
-    if trajectories:
-        from src.trajectory_analysis import TrajectoryAnalyzer
-        analyzer = TrajectoryAnalyzer(config)
+    try:
+        # Calculate comprehensive metrics
+        print("📊 Calculating comprehensive performance metrics...")
+        comprehensive_metrics = comparison.calculate_comprehensive_metrics(all_results)
         
-        # 提取特征
-        feature_data = {}
-        for traj_id, traj_data in trajectories.items():
-            features = analyzer.compute_trajectory_features(traj_data['trajectory'])
-            if features:
-                feature_data[traj_id] = features
+        if not comprehensive_metrics:
+            print("❌ No algorithm results available for comparison")
+            return None
         
-        if feature_data:
-            # 转换为特征矩阵
-            feature_matrix = []
-            for features in feature_data.values():
-                feature_vector = [
-                    features.get('total_distance', 0),
-                    features.get('displacement', 0),
-                    features.get('mean_velocity', 0),
-                    features.get('tortuosity', 1),
-                    features.get('straightness', 0),
-                    features.get('complexity', 0)
-                ]
-                feature_matrix.append(feature_vector)
-            
-            feature_matrix = np.array(feature_matrix)
-            
-            # 标准化
-            from sklearn.preprocessing import StandardScaler
-            scaler = StandardScaler()
-            feature_matrix = scaler.fit_transform(feature_matrix)
-            
-            clustering_results = benchmark.clustering_comparison.compare_clustering_methods(feature_matrix)
-        else:
-            clustering_results = {}
-    else:
-        clustering_results = {}
-    
-    # 生成报告
-    results = {
-        'tracking': tracking_results,
-        'similarity': similarity_results,
-        'clustering': clustering_results
-    }
-    
-    report = benchmark.generate_comparison_report(
-        tracking_results, similarity_results, clustering_results
-    )
-    
-    # 保存报告
-    import os
-    report_path = os.path.join(config.RESULTS_ROOT, "algorithm_comparison_report.txt")
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(report)
-    
-    # 可视化结果
-    viz_path = os.path.join(config.RESULTS_ROOT, "algorithm_comparison.png")
-    benchmark.visualize_comparison_results(results, viz_path)
-    
-    print(f"算法对比报告已保存: {report_path}")
-    print("\n" + "="*50)
-    print("算法对比报告预览:")
-    print("="*50)
-    print(report[:1000] + "..." if len(report) > 1000 else report)
-    
-    return results, report
+        print(f"✓ Analyzed {len(comprehensive_metrics)} algorithms")
+        
+        # Generate detailed report
+        print("📝 Generating detailed analysis report...")
+        detailed_report = comparison.generate_detailed_report(comprehensive_metrics)
+        
+        # Save report
+        comparison_dir = os.path.join(config.RESULTS_ROOT, "algorithm_comparison")
+        os.makedirs(comparison_dir, exist_ok=True)
+        
+        report_path = os.path.join(comparison_dir, "enhanced_comparison_report.txt")
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(detailed_report)
+        
+        print(f"✓ Detailed report saved: {report_path}")
+        
+        # Create comprehensive visualizations
+        print("📈 Creating comprehensive visualizations...")
+        comparison.create_comprehensive_visualizations(
+            comprehensive_metrics, comparison_dir, visualizer)
+        
+        # Export to CSV for further analysis
+        csv_path = os.path.join(comparison_dir, "algorithm_metrics.csv")
+        comparison.export_results_to_csv(comprehensive_metrics, csv_path)
+        
+        # Display summary
+        print("\n" + "="*60)
+        print("ALGORITHM COMPARISON SUMMARY")
+        print("="*60)
+        
+        # Find best performers
+        best_overall = max(comprehensive_metrics.items(), 
+                          key=lambda x: x[1]['composite_performance_score'])
+        fastest = min(comprehensive_metrics.items(), 
+                     key=lambda x: x[1]['avg_computation_times'])
+        highest_quality = max(comprehensive_metrics.items(), 
+                            key=lambda x: x[1]['avg_quality_scores'])
+        
+        print(f"🏆 Best Overall: {best_overall[0].upper()} (Score: {best_overall[1]['composite_performance_score']:.3f})")
+        print(f"⚡ Fastest: {fastest[0].upper()} ({fastest[1]['avg_computation_times']:.4f}s)")
+        print(f"🎯 Highest Quality: {highest_quality[0].upper()} (Score: {highest_quality[1]['avg_quality_scores']:.3f})")
+        
+        print(f"\n📂 Results Location:")
+        print(f"   • Report: {report_path}")
+        print(f"   • Visualizations: {comparison_dir}")
+        print(f"   • CSV Data: {csv_path}")
+        
+        print("\n" + "="*60)
+        print("Enhanced Algorithm Comparison Complete! 🎉")
+        print("="*60)
+        
+        return {
+            'comprehensive_metrics': comprehensive_metrics,
+            'report_path': report_path,
+            'visualization_dir': comparison_dir,
+            'csv_path': csv_path
+        }
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Enhanced algorithm comparison failed: {e}")
+        print(f"❌ Algorithm comparison failed: {e}")
+        return None

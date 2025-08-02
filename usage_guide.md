@@ -1,533 +1,528 @@
-# EEG轨迹跟踪算法对比系统 - 详细使用指南
+# 增强版EEG轨迹分析 - 详细使用指南
 
-## 📚 目录
+## 🚀 入门指南
 
-1. [快速开始](#快速开始)
-2. [数据准备](#数据准备)
-3. [配置说明](#配置说明)
-4. [运行实验](#运行实验)
-5. [结果解读](#结果解读)
-6. [高级用法](#高级用法)
-7. [故障排除](#故障排除)
+### 第一步：系统验证
 
-## 🚀 快速开始
-
-### 1. 环境检查
-
-运行快速测试脚本验证安装：
+在开始分析之前，先验证系统安装：
 
 ```bash
 python quick_test.py
 ```
 
-如果测试通过，您可以继续下面的步骤。
+预期输出：
+```
+✅ 所有依赖正确安装！
+✅ 5/5算法可用
+✅ 合成数据处理成功
+✅ 增强可视化功能正常
+🎉 极佳！系统完全正常运行！
+```
 
-### 2. 最小化测试
+### 第二步：基础分析
+
+用示例数据进行快速测试：
 
 ```bash
-# 使用3个被试快速测试（约5-10分钟）
-python main.py --subjects 3 --epochs 2
+# 快速模式 - 推荐首次运行
+python main.py --fast-mode
 
-# 查看结果
-ls results/algorithm_comparison/
+# 这将会：
+# - 最多处理3个被试
+# - 每个被试使用1个epoch
+# - 限制为每个epoch 100帧
+# - 测试前3种算法
 ```
 
-### 3. 完整实验
+### 第三步：自定义分析
+
+根据需要配置分析：
 
 ```bash
-# 运行完整的12被试算法对比（约30-60分钟）
-python main.py
+# 中等规模分析
+python main.py --subjects 6 --epochs 2 --frames 200
+
+# 高精度分析
+python main.py --algorithms hungarian hybrid --frames 300
+
+# 速度优化分析
+python main.py --algorithms greedy --frames 100 --subjects 4
 ```
 
-## 📁 数据准备
+## 🎯 算法选择指南
 
-### 支持的数据格式
+### 根据需求选择
 
-系统支持以下EEG数据格式：
-- **BrainVision** (`.vhdr`, `.eeg`, `.vmrk`)
-- **EDF/EDF+** (`.edf`)
-- **MNE-Python FIF** (`.fif`)
-- **EEGLAB** (`.set`)
-- **Neuroscan CNT** (`.cnt`)
+#### 实时应用
+```bash
+python main.py --algorithms greedy --frames 100
+```
+- **贪婪算法**：最快处理
+- **低内存使用**：适合资源受限环境
+- **良好跟踪**：适合大多数应用
 
-### 数据目录结构
+#### 高精度研究
+```bash
+python main.py --algorithms hungarian hybrid --frames 300
+```
+- **匈牙利算法**：全局最优匹配
+- **混合算法**：最佳整体性能
+- **更高精度**：更好的轨迹质量
 
-确保您的数据按以下结构组织：
+#### 对比研究
+```bash
+python main.py --algorithms greedy hungarian kalman overlap hybrid
+```
+- **所有算法**：全面比较
+- **统计分析**：详细性能指标
+- **发表级别**：专业可视化
+
+## 📊 理解结果
+
+### 结果目录结构
+
+运行分析后，检查`results/`目录：
 
 ```
-data/ds005262/
-├── sub-0/
-│   ├── ses-0/
-│   │   └── eeg/
-│   │       ├── sub-0_ses-0_task-innerspeech_eeg.vhdr
-│   │       ├── sub-0_ses-0_task-innerspeech_eeg.eeg
-│   │       └── sub-0_ses-0_task-innerspeech_eeg.vmrk
-│   ├── ses-1/
-│   │   └── eeg/
+results/
+├── algorithm_comparison/           # 主要比较结果
+│   ├── enhanced_comparison_report.txt
+│   ├── main_algorithm_comparison.png
+│   ├── performance_radar_chart.png
+│   ├── detailed_comparison_table.png
+│   ├── statistical_analysis.png
+│   ├── performance_trends.png
+│   └── algorithm_metrics.csv
+├── trajectories/                   # 个别轨迹图
+│   ├── subject1_session1_epoch0_greedy_trajectories.png
+│   ├── subject1_session1_epoch0_hungarian_trajectories.png
 │   └── ...
-├── sub-1/
-│   └── ...
-└── sub-N/
+├── experiment_summary.png          # 总体实验摘要
+└── enhanced_experiment_summary.txt # 详细文本报告
 ```
 
-### 数据质量要求
+### 关键输出文件说明
 
-- **采样率**: 建议 ≥ 250 Hz
-- **通道数**: 建议 ≥ 32 个EEG通道
-- **记录长度**: 建议 ≥ 60 秒
-- **数据质量**: 预处理过的干净数据效果更好
+#### 1. 增强比较报告 (`enhanced_comparison_report.txt`)
+```
+执行摘要
+---------
+• 最佳整体性能：HYBRID（分数：0.847）
+• 最快算法：GREEDY（0.0234秒平均）
+• 最高质量：HUNGARIAN（分数：0.892）
+• 最高效率：GREEDY（42.3轨迹/秒）
 
-### 修改数据路径
-
-在 `config.py` 中修改数据路径：
-
-```python
-# 修改为您的数据路径
-DATA_ROOT = "/path/to/your/eeg/data"
+详细算法分析
+-----------
+贪婪算法：
+性能指标：
+  • 平均轨迹检测：4.23 ± 1.12
+  • 平均计算时间：0.0234秒 ± 0.0045秒
+  • 平均轨迹质量：0.734 ± 0.089
+  ...
 ```
 
-## ⚙️ 配置说明
+#### 2. 性能比较图表 (`main_algorithm_comparison.png`)
+- **6面板可视化**显示：
+  - 平均轨迹数量
+  - 计算时间比较
+  - 质量分数比较
+  - 轨迹长度分析
+  - 处理效率
+  - 整体性能分数
 
-### 基本配置
+#### 3. 雷达图 (`performance_radar_chart.png`)
+- **多维比较**包括：
+  - 轨迹检测能力
+  - 质量评估
+  - 处理速度
+  - 效率指标
+  - 稳定性测量
 
-在 `config.py` 中可以调整以下主要参数：
-
-```python
-# 实验规模
-MAX_SUBJECTS = 12              # 处理的被试数量
-MAX_EPOCHS_PER_SUBJECT = 3     # 每个被试的epoch数量
-MAX_SESSIONS_PER_SUBJECT = 5   # 每个被试的session数量
-
-# 算法对比
-ENABLE_ALGORITHM_COMPARISON = True
-COMPARISON_ALGORITHMS = [
-    'greedy',      # 贪婪算法
-    'hungarian',   # 匈牙利算法
-    'kalman',      # 卡尔曼预测
-    'overlap',     # 重叠度匹配
-    'hybrid'       # 混合算法
-]
+#### 4. CSV数据 (`algorithm_metrics.csv`)
+供Excel/R/Python进一步分析的原始数值数据：
+```csv
+Algorithm,Avg_Trajectories,Avg_Computation_Time,Avg_Quality,...
+greedy,4.23,0.0234,0.734,...
+hungarian,4.56,0.0892,0.847,...
+kalman,3.89,0.0456,0.756,...
+...
 ```
 
-### 算法参数
+## 🔧 配置选项
 
-每种算法都有独立的参数配置：
+### 帧数限制配置
+
+控制处理速度和内存使用：
+
+```bash
+# 快速处理（适合测试）
+python main.py --frames 50
+
+# 平衡处理（推荐）
+python main.py --frames 200
+
+# 高细节（较慢但更完整）
+python main.py --frames 400
+```
+
+**帧数限制的影响：**
+- **低值（50-100）**：更快、更少内存、更短轨迹
+- **中等值（150-250）**：平衡性能和质量
+- **高值（300+）**：较慢、更多内存、更长轨迹
+
+### 被试和Epoch配置
+
+```bash
+# 快速测试
+python main.py --subjects 2 --epochs 1
+
+# 标准分析
+python main.py --subjects 6 --epochs 2
+
+# 综合研究
+python main.py --subjects 12 --epochs 3
+```
+
+### 算法特定设置
+
+修改`config.py`进行细调：
 
 ```python
 ALGORITHM_CONFIGS = {
     'greedy': {
-        'distance_threshold': 25.0,      # 距离阈值
-        'enable_reconnection': True,     # 启用重连
-        'max_inactive_frames': 25        # 最大非活跃帧数
+        'distance_threshold': 20.0,    # 更严格匹配
+        'enable_reconnection': True,   # 允许轨迹重连
     },
     'hungarian': {
-        'distance_threshold': 25.0,      # 距离阈值
-        'use_weighted_cost': True,       # 使用加权成本
-        'cost_threshold': 50.0           # 成本阈值
+        'distance_threshold': 25.0,
+        'use_weighted_cost': True,     # 多因素优化
     },
-    # ... 其他算法配置
+    'kalman': {
+        'prediction_weight': 0.5,      # 更强预测
+        'distance_threshold': 30.0,
+    }
 }
 ```
 
-### 性能优化配置
+## 📈 结果解读
+
+### 性能指标解释
+
+#### 轨迹数量
+- **越高通常越好**（检测到更多活动）
+- **考虑背景**：某些算法可能过度检测
+- **范围**：通常每个epoch 2-8条轨迹
+
+#### 质量分数（0-1）
+- **0.0-0.3**：质量差，轨迹碎片化
+- **0.3-0.6**：质量一般，适合基础分析
+- **0.6-0.8**：质量好，适合研究
+- **0.8-1.0**：质量极佳，发表级别
+
+#### 计算时间
+- **实时要求**：< 0.1秒每epoch
+- **交互分析**：< 0.5秒每epoch
+- **批处理**：< 2.0秒每epoch可接受
+
+#### 效率（轨迹/秒）
+- **高效率**：> 20轨迹/秒
+- **中等效率**：10-20轨迹/秒
+- **低效率**：< 10轨迹/秒
+
+### 何时选择每种算法
+
+#### 贪婪算法
+✅ **适用于：**
+- 需要实时处理
+- 计算资源有限
+- 快速探索性分析
+- 简单轨迹模式
+
+❌ **避免用于：**
+- 需要高精度
+- 复杂重叠轨迹
+- 需要发表质量结果
+
+#### 匈牙利算法
+✅ **适用于：**
+- 需要高精度
+- 需要发表质量结果
+- 最优匹配重要
+- 计算资源可用
+
+❌ **避免用于：**
+- 需要实时处理
+- 非常大的数据集
+- 快速探索性分析
+
+#### 卡尔曼算法
+✅ **适用于：**
+- 可预测的运动模式
+- 通过短暂遮挡的跟踪
+- 轨迹连续性重要
+- 运动动力学相关
+
+❌ **避免用于：**
+- 高度不规则运动
+- 静态或慢运动模式
+- 无明确运动方向
+
+#### 重叠算法
+✅ **适用于：**
+- 有区域形状信息
+- 需要空间重叠分析
+- 基于形状的跟踪重要
+- 中等计算预算
+
+❌ **避免用于：**
+- 形状信息不可靠
+- 需要很快处理
+- 基于点的跟踪足够
+
+#### 混合算法
+✅ **适用于：**
+- 需要最佳结果
+- 计算资源可用
+- 复杂跟踪场景
+- 需要综合分析
+
+❌ **避免用于：**
+- 实时约束
+- 简单跟踪场景
+- 计算资源有限
+
+## 🎨 可视化指南
+
+### 理解图表
+
+#### 轨迹图
+- **彩色线条**：不同轨迹
+- **圆圈**：起始点
+- **方块**：结束点
+- **箭头**：运动方向
+- **头部轮廓**：电极布局参考
+
+#### 比较图表
+- **柱状图**：直接指标比较
+- **箱线图**：统计分布
+- **雷达图**：多维视图
+- **散点图**：权衡分析
+
+### 自定义可视化
+
+修改`config.py`进行自定义可视化：
 
 ```python
-# 内存和性能
-MEMORY_LIMIT_MB = 4096         # 内存限制
-TOPO_SIZE = (128, 128)         # 地形图尺寸
-TIME_WINDOW = 2.0              # 分析时间窗口
-
-# 检测参数
-THRESHOLD_PERCENTILE = 88      # 阈值百分位数
-MIN_REGION_SIZE = 25           # 最小区域面积
-MAX_REGIONS = 6                # 最大跟踪区域数
-```
-
-## 🎮 运行实验
-
-### 命令行参数
-
-```bash
-# 基本用法
-python main.py [选项]
-
-# 可用选项：
---subjects N          # 限制被试数量
---epochs N             # 限制每被试epoch数量
---algorithms ALG1 ALG2 # 指定要对比的算法
---disable-comparison   # 禁用算法对比，仅使用greedy
---output-dir DIR       # 指定输出目录
---help                 # 显示帮助信息
-```
-
-### 常用运行模式
-
-#### 1. 快速测试模式
-```bash
-# 3个被试，2个epoch，约5分钟
-python main.py --subjects 3 --epochs 2
-```
-
-#### 2. 特定算法对比
-```bash
-# 只对比贪婪和匈牙利算法
-python main.py --algorithms greedy hungarian
-```
-
-#### 3. 单算法模式
-```bash
-# 禁用算法对比，仅使用greedy
-python main.py --disable-comparison
-```
-
-#### 4. 完整实验
-```bash
-# 所有被试，所有算法
-python main.py
-```
-
-### 实时监控
-
-#### 查看进度
-```bash
-# 在另一个终端查看日志
-tail -f logs/experiment_*.log
-```
-
-#### 监控资源使用
-```bash
-# Linux/macOS
-top -p $(pgrep -f "python main.py")
-
-# Windows (PowerShell)
-Get-Process python | Where-Object {$_.ProcessName -eq "python"}
-```
-
-## 📊 结果解读
-
-### 输出目录结构
-
-```
-results/
-├── algorithm_comparison/          # 算法对比结果
-│   ├── comparison_report.txt      # 详细对比报告 ⭐
-│   ├── algorithm_performance_comparison.png  # 性能对比图 ⭐
-│   ├── algorithm_radar_chart.png  # 雷达图
-│   └── algorithm_comparison_results.pkl  # 原始数据
-├── trajectories/                  # 轨迹图
-│   └── {subject}_{session}_epoch{N}_{algorithm}_trajectories.png
-├── topographies/                  # 地形图
-└── analysis/                      # 分析报告
-```
-
-### 关键结果文件
-
-#### 1. 对比报告 (`comparison_report.txt`)
-
-报告包含以下关键信息：
-
-```
-算法性能汇总:
-GREEDY 算法:
-  平均轨迹数量: 4.20
-  平均计算时间: 0.150s
-  综合性能分数: 3.45
-
-算法性能排名:
-1. HUNGARIAN: 4.12  🏆 综合性能最佳
-2. HYBRID: 3.87
-3. GREEDY: 3.45
-
-使用建议:
-• 综合推荐: hungarian (综合性能最佳)
-• 实时处理推荐: greedy (速度优先)
-• 高精度分析推荐: hungarian (质量优先)
-```
-
-#### 2. 性能对比图
-
-- **柱状图**: 直观对比各项指标
-- **雷达图**: 多维度性能展示
-- **轨迹图**: 各算法的实际轨迹结果
-
-### 性能指标含义
-
-| 指标 | 含义 | 理想值 |
-|------|------|--------|
-| trajectory_count | 检测到的轨迹数量 | 适中（太多可能有误检） |
-| average_trajectory_length | 平均轨迹长度 | 较长（表示跟踪稳定） |
-| tracking_continuity | 跟踪连续性 | 越高越好 |
-| trajectory_smoothness | 轨迹平滑度 | 越高越好 |
-| computation_time | 计算时间 | 越短越好 |
-| trajectory_quality | 综合质量分数 | 越高越好 |
-
-### 算法选择建议
-
-#### 根据应用场景选择：
-
-1. **实时处理场景**
-   - 推荐: `greedy`
-   - 特点: 速度快，资源消耗低
-
-2. **高精度离线分析**
-   - 推荐: `hungarian`
-   - 特点: 全局最优，质量高
-
-3. **平滑轨迹追踪**
-   - 推荐: `kalman`
-   - 特点: 运动预测，轨迹平滑
-
-4. **形状保持跟踪**
-   - 推荐: `overlap`
-   - 特点: 基于重叠度，形状一致性好
-
-5. **复杂场景综合**
-   - 推荐: `hybrid`
-   - 特点: 综合多特征，适应性强
-
-## 🔧 高级用法
-
-### 自定义算法
-
-#### 1. 创建新算法类
-
-```python
-# trackers/my_tracker.py
-from trackers.base_tracker import BaseTracker
-
-class MyTracker(BaseTracker):
-    def __init__(self, config):
-        super().__init__(config)
-        self.algorithm_name = "my_algorithm"
-        self.description = "我的自定义算法"
-    
-    def match_regions(self, current_regions, distance_threshold=None, frame_idx=0):
-        # 实现您的匹配逻辑
-        matches = []
-        # ... 您的算法实现
-        return matches
-```
-
-#### 2. 注册新算法
-
-```python
-# 在main.py中添加
-from trackers.my_tracker import MyTracker
-TrackerFactory.register_tracker('my_algorithm', MyTracker)
-
-# 在config.py中添加
-COMPARISON_ALGORITHMS.append('my_algorithm')
-```
-
-### 批量处理脚本
-
-```python
-# batch_analysis.py
-import subprocess
-import os
-
-# 定义不同的实验配置
-experiments = [
-    {'subjects': 3, 'algorithms': ['greedy', 'hungarian']},
-    {'subjects': 6, 'algorithms': ['kalman', 'overlap']},
-    {'subjects': 12, 'algorithms': ['hybrid']}
-]
-
-for i, exp in enumerate(experiments):
-    output_dir = f'results_experiment_{i+1}'
-    cmd = [
-        'python', 'main.py',
-        '--subjects', str(exp['subjects']),
-        '--algorithms'] + exp['algorithms'] + [
-        '--output-dir', output_dir
-    ]
-    
-    print(f"Running experiment {i+1}: {' '.join(cmd)}")
-    subprocess.run(cmd)
-```
-
-### 参数优化
-
-```python
-# optimize_parameters.py
-from config import Config
-import itertools
-
-# 定义参数搜索空间
-param_space = {
-    'THRESHOLD_PERCENTILE': [85, 88, 90, 92],
-    'MIN_REGION_SIZE': [20, 25, 30],
-    'MAX_REGIONS': [4, 6, 8]
+VISUALIZATION_CONFIG = {
+    'generate_comparison_plots': True,
+    'generate_heatmaps': True,
+    'generate_trajectory_overlays': True,
+    'save_individual_results': True,
 }
-
-# 网格搜索
-best_score = 0
-best_params = None
-
-for params in itertools.product(*param_space.values()):
-    # 设置参数
-    Config.THRESHOLD_PERCENTILE = params[0]
-    Config.MIN_REGION_SIZE = params[1]
-    Config.MAX_REGIONS = params[2]
-    
-    # 运行实验并评估
-    # ... 运行main.py并获取结果
-    # score = evaluate_results(results)
-    
-    # if score > best_score:
-    #     best_score = score
-    #     best_params = params
-
-print(f"Best parameters: {best_params}, Score: {best_score}")
 ```
 
-## 🐛 故障排除
+## 🐛 常见问题故障排除
 
-### 常见问题及解决方案
+### 问题1：未检测到轨迹
 
-#### 1. 内存不足
+**症状：**
+```
+⚠️ 算法：未检测到轨迹
+```
 
-**症状**: `MemoryError` 或系统变慢
-**解决方案**:
+**解决方案：**
+1. 检查数据质量和预处理
+2. 调整`config.py`中的阈值参数：
+   ```python
+   THRESHOLD_PERCENTILE = 85  # 降低以获得更敏感的检测
+   MIN_REGION_SIZE = 15       # 更小的最小区域大小
+   ```
+3. 验证电极位置正确
+4. 尝试不同算法（某些可能更敏感）
+
+### 问题2：内存错误
+
+**症状：**
+```
+MemoryError: 无法分配数组
+```
+
+**解决方案：**
+1. 减少帧数限制：
+   ```bash
+   python main.py --frames 100
+   ```
+2. 处理更少被试：
+   ```bash
+   python main.py --subjects 3
+   ```
+3. 使用快速模式：
+   ```bash
+   python main.py --fast-mode
+   ```
+
+### 问题3：处理缓慢
+
+**症状：**
+- 处理时间很长
+- 系统无响应
+
+**解决方案：**
+1. 启用测试快速模式
+2. 减少计算负载：
+   ```bash
+   python main.py --algorithms greedy --frames 100
+   ```
+3. 关闭其他应用以释放内存
+4. 检查系统规格
+
+### 问题4：可视化问题
+
+**症状：**
+- 空白或损坏的图表
+- 字体渲染问题
+
+**解决方案：**
+1. 系统使用英文标签以确保兼容性
+2. 更新matplotlib：
+   ```bash
+   pip install --upgrade matplotlib
+   ```
+3. 检查`results/`目录中的可用磁盘空间
+
+## 📚 高级使用模式
+
+### 模式1：算法开发工作流
+
 ```bash
-# 减少处理规模
-python main.py --subjects 3 --epochs 1
+# 1. 快速验证
+python quick_test.py
 
-# 或在config.py中调整
-MEMORY_LIMIT_MB = 2048
-MAX_EPOCHS_PER_SUBJECT = 1
+# 2. 快速算法测试
+python main.py --fast-mode --algorithms greedy hungarian
+
+# 3. 详细比较
+python main.py --subjects 6 --algorithms greedy hungarian kalman
+
+# 4. 发表质量分析
+python main.py --frames 300 --epochs 3 --algorithms hungarian hybrid
 ```
 
-#### 2. 数据加载失败
+### 模式2：参数优化
 
-**症状**: "未能加载任何EEG数据"
-**解决方案**:
-1. 检查数据路径: `ls /path/to/your/data`
-2. 检查文件格式是否支持
-3. 确认文件权限: `chmod -R 755 /path/to/data`
-
-#### 3. 算法执行失败
-
-**症状**: 某个算法的结果为空
-**解决方案**:
 ```bash
-# 查看详细日志
-grep "ERROR\|WARNING" logs/experiment_*.log
+# 测试不同帧数限制
+for frames in 100 150 200 250; do
+    python main.py --frames $frames --subjects 2 --algorithms greedy
+done
 
-# 禁用有问题的算法
-python main.py --algorithms greedy hungarian  # 只运行稳定的算法
+# 比较结果找到最优设置
 ```
 
-#### 4. 中文字体显示问题
+### 模式3：批量分析
 
-**症状**: 图表中中文显示为方块
-**解决方案**:
-- 系统会自动检测并回退到英文
-- 手动安装中文字体或忽略此问题
-
-#### 5. 依赖库版本冲突
-
-**症状**: ImportError 或版本警告
-**解决方案**:
 ```bash
-# 创建新的虚拟环境
-python -m venv eeg_env
-source eeg_env/bin/activate  # Linux/macOS
-# 或 eeg_env\Scripts\activate  # Windows
-
-# 重新安装依赖
-pip install -r requirements.txt
+# 处理多个数据集
+python main.py --subjects 12 --epochs 3 --algorithms hungarian
 ```
 
-### 性能优化建议
+## 💡 最佳实践
 
-#### 1. 硬件配置
+### 1. 从小开始
+- 总是从新数据集的`--fast-mode`开始
+- 在扩展之前验证结果
+- 检查样本输出的质量
 
-- **内存**: 推荐 8GB+，建议 16GB+
-- **CPU**: 多核处理器，建议 4核+
-- **存储**: SSD 优于 HDD
+### 2. 渐进式分析
+1. **快速测试**：2个被试，1个epoch，1-2种算法
+2. **中等测试**：4-6个被试，2个epoch，3种算法
+3. **完整分析**：所有被试，所有epoch，所有算法
 
-#### 2. 软件优化
+### 3. 结果验证
+- 检查轨迹图的生物学合理性
+- 比较算法结果的一致性
+- 在可用时与已知真实情况验证
 
-```python
-# 在config.py中调整
-# 降低地形图分辨率
-TOPO_SIZE = (64, 64)  # 默认 (128, 128)
+### 4. 性能监控
+- 在处理期间监控内存使用
+- 检查处理时间的可扩展性
+- 验证结果质量指标
 
-# 减少处理帧数
-TIME_WINDOW = 1.0     # 默认 2.0
+### 5. 文档记录
+- 保存使用的配置设置
+- 记录任何参数修改
+- 保留分析日志以便重现
 
-# 限制算法数量
-COMPARISON_ALGORITHMS = ['greedy', 'hungarian']  # 只选重要算法
+## 📈 性能建议
+
+### 快速结果配置
+```bash
+python main.py --fast-mode --subjects 2
 ```
 
-#### 3. 并行处理
-
-```python
-# 在主程序中添加并行处理
-from multiprocessing import Pool
-
-def process_subject_parallel(subject_data):
-    # 处理单个被试的逻辑
-    pass
-
-# 使用进程池
-with Pool(processes=4) as pool:
-    results = pool.map(process_subject_parallel, subject_list)
+### 高质量配置
+```bash
+python main.py --frames 300 --epochs 3 --algorithms hungarian hybrid
 ```
 
-### 调试技巧
-
-#### 1. 启用详细日志
-
-```python
-# 在main.py开头添加
-import logging
-logging.getLogger().setLevel(logging.DEBUG)
+### 内存限制系统配置
+```bash
+python main.py --frames 100 --subjects 2 --epochs 1
 ```
 
-#### 2. 内存监控
-
-```python
-# 添加内存监控
-import psutil
-import gc
-
-def check_memory():
-    process = psutil.Process()
-    mem_info = process.memory_info()
-    print(f"Memory usage: {mem_info.rss / 1024 / 1024:.1f} MB")
-    gc.collect()
-
-# 在关键位置调用
-check_memory()
-```
-
-#### 3. 性能分析
-
-```python
-# 使用性能分析器
-import cProfile
-import pstats
-
-# 运行性能分析
-cProfile.run('main()', 'profile_stats')
-
-# 查看结果
-stats = pstats.Stats('profile_stats')
-stats.sort_stats('cumulative').print_stats(10)
+### 平衡配置（推荐）
+```bash
+python main.py --subjects 12 --epochs 2 --frames 300 --algorithms greedy hungarian kalman hybrid overlap
 ```
 
 ## 📞 获取帮助
 
-如果您遇到问题：
+### 内置帮助
+```bash
+python main.py --help
+python quick_test.py --help
+```
 
-1. **检查日志**: `logs/experiment_*.log`
-2. **运行测试**: `python quick_test.py`
-3. **查看文档**: 阅读 `README.md`
-4. **社区支持**: 在GitHub Issues中提问
-5. **联系维护者**: [your.email@example.com]
+### 日志分析
+检查`logs/`目录中的日志文件以获得详细信息：
+```bash
+tail -f logs/enhanced_experiment_*.log
+```
+
+### 系统信息
+```bash
+python -c "import sys; print(f'Python: {sys.version}')"
+python -c "import numpy; print(f'NumPy: {numpy.__version__}')"
+python -c "import matplotlib; print(f'Matplotlib: {matplotlib.__version__}')"
+```
+
+### 示例运行
+```bash
+# 运行示例脚本查看系统功能
+python example_analysis.py
+```
+
+## 💻 硬件建议
+
+### 最低要求
+- **CPU**：双核2GHz+
+- **RAM**：4GB
+- **存储**：1GB可用空间
+- **Python**：3.8+
+
+### 推荐配置
+- **CPU**：四核3GHz+
+- **RAM**：8GB+
+- **存储**：2GB+可用空间
+- **Python**：3.9+
+
+### 高性能配置
+- **CPU**：八核3GHz+
+- **RAM**：16GB+
+- **存储**：SSD存储
+- **Python**：3.10+
 
 ---
 
-**祝您使用愉快！如果这个系统对您的研究有帮助，欢迎引用相关文献。** 🎉
+这个指南应该帮助你充分利用增强版EEG轨迹分析系统。如需更多支持，请参考主README.md或在项目仓库中创建问题。

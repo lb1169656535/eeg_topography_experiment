@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EEG脑电地形图运动轨迹分析主程序 - 算法对比增强版
-集成多种跟踪算法对比功能
-版本: 3.0.0 - 算法对比版
-更新时间: 2025-08-01
+Enhanced EEG Topography Motion Trajectory Analysis Main Program
+Algorithm Comparison Edition with Improved Visualization and Analysis
+Version: 3.1.0 - Enhanced Edition (Fixed)
+Updated: 2025-08-02
 """
 
 import os
@@ -21,17 +21,17 @@ from tqdm import tqdm
 import warnings
 import time
 
-# 抑制警告
+# Suppress warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
 warnings.filterwarnings('ignore', category=UserWarning)
 
-# 添加src到路径
+# Add paths
 sys.path.append('src')
 sys.path.append('trackers')
 
-# 字体配置 - 保持原有设置
+# Font configuration - English only
 def setup_matplotlib_font():
-    """配置matplotlib字体"""
+    """Configure matplotlib font for English only"""
     import matplotlib.pyplot as plt
     import matplotlib.font_manager as fm
     
@@ -40,58 +40,29 @@ def setup_matplotlib_font():
     except:
         pass
     
-    system = platform.system()
-    use_chinese = False
+    # Use safe English fonts only
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Liberation Sans']
+    plt.rcParams['axes.unicode_minus'] = False
     
-    chinese_fonts = []
-    if system == "Windows":
-        chinese_fonts = ['Microsoft YaHei', 'SimHei', 'SimSun', 'KaiTi']
-    elif system == "Darwin":  # macOS
-        chinese_fonts = ['PingFang SC', 'Hiragino Sans GB', 'STHeiti']
-    elif system == "Linux":
-        chinese_fonts = ['Noto Sans CJK SC', 'WenQuanYi Micro Hei', 'Droid Sans Fallback']
-    
-    available_fonts = [f.name for f in fm.fontManager.ttflist]
-    
-    for font in chinese_fonts:
-        if font in available_fonts:
-            try:
-                plt.rcParams['font.sans-serif'] = [font] + plt.rcParams['font.sans-serif']
-                plt.rcParams['axes.unicode_minus'] = False
-                
-                fig, ax = plt.subplots(figsize=(1, 1))
-                ax.text(0.5, 0.5, '测试', ha='center', va='center')
-                plt.close(fig)
-                use_chinese = True
-                print(f"✓ 字体配置成功: {font}")
-                break
-            except:
-                continue
-    
-    if not use_chinese:
-        print("⚠️  使用英文标签模式")
-        plt.rcParams['font.family'] = 'DejaVu Sans'
-    
-    return use_chinese
+    print("✓ Font configuration: English labels only")
+    return True
 
-# 设置字体
-USE_CHINESE = setup_matplotlib_font()
+# Set up font
+USE_ENGLISH_ONLY = setup_matplotlib_font()
 
 from config import Config
 from src import EEGDataLoader, TopographyGenerator, TrajectoryAnalyzer, Visualizer
 from trackers import TrackerFactory
-
-def get_label(key, chinese_text, english_text):
-    """获取标签文本"""
-    return chinese_text if USE_CHINESE else english_text
+from algorithm_comparison import run_enhanced_algorithm_comparison
 
 def setup_logging():
-    """设置日志系统"""
+    """Set up logging system"""
     log_dir = Config.LOGS_ROOT
     os.makedirs(log_dir, exist_ok=True)
     
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_file = os.path.join(log_dir, f"experiment_{timestamp}.log")
+    log_file = os.path.join(log_dir, f"enhanced_experiment_{timestamp}.log")
     
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -111,12 +82,12 @@ def setup_logging():
     )
     
     logger = logging.getLogger(__name__)
-    logger.info(f"日志系统已初始化，日志文件: {log_file}")
+    logger.info(f"Enhanced logging system initialized: {log_file}")
     
     return logger
 
 def check_dependencies():
-    """检查必要的依赖库"""
+    """Check required dependencies"""
     required_packages = {
         'mne': 'MNE-Python',
         'numpy': 'NumPy',
@@ -124,7 +95,9 @@ def check_dependencies():
         'matplotlib': 'Matplotlib',
         'sklearn': 'Scikit-learn',
         'cv2': 'OpenCV',
-        'tqdm': 'tqdm'
+        'tqdm': 'tqdm',
+        'pandas': 'Pandas',
+        'seaborn': 'Seaborn'
     }
     
     missing_packages = []
@@ -136,217 +109,206 @@ def check_dependencies():
             missing_packages.append(name)
     
     if missing_packages:
-        print("❌ 缺少以下必要的依赖库:")
+        print("❌ Missing required dependencies:")
         for package in missing_packages:
             print(f"  - {package}")
-        print("\n请使用以下命令安装:")
-        print("pip install -r requirements.txt")
+        print("\nPlease install using: pip install -r requirements.txt")
         return False
     
     return True
 
 def print_system_info():
-    """打印系统信息"""
-    print("=" * 70)
-    title = get_label('title', 'EEG脑电地形图运动轨迹分析系统 - 算法对比版', 
-                     'EEG Topography Motion Trajectory Analysis System - Algorithm Comparison Edition')
-    print(title)
-    print("=" * 70)
-    print(f"Python版本: {platform.python_version()}")
-    print(f"操作系统: {platform.system()} {platform.release()}")
-    print(f"处理器: {platform.machine()}")
-    print(f"字体支持: {'中文' if USE_CHINESE else 'English Only'}")
+    """Print system information"""
+    print("=" * 80)
+    print("EEG TOPOGRAPHY MOTION TRAJECTORY ANALYSIS SYSTEM")
+    print("Enhanced Algorithm Comparison Edition")
+    print("=" * 80)
+    print(f"Python Version: {platform.python_version()}")
+    print(f"Operating System: {platform.system()} {platform.release()}")
+    print(f"Processor: {platform.machine()}")
+    print(f"Font Support: English Only (for compatibility)")
     
-    # 显示实验配置
+    # Display experiment configuration
     summary = Config.get_experiment_summary()
-    print(f"\n实验配置:")
-    print(f"  被试数量: {summary['total_subjects']}")
-    print(f"  对比算法数量: {summary['algorithms_count']}")
-    print(f"  算法列表: {', '.join(summary['algorithm_names'])}")
-    print(f"  评估指标数量: {summary['metrics_count']}")
-    print(f"  每个epoch最大帧数: {summary['max_frames_per_epoch']}")  # 新增显示
-    print(f"  算法对比: {'启用' if summary['algorithm_comparison_enabled'] else '禁用'}")
+    print(f"\nExperiment Configuration:")
+    print(f"  • Subjects to Process: {summary['total_subjects']}")
+    print(f"  • Algorithm Comparison: {len(summary['algorithm_names'])} algorithms")
+    print(f"  • Algorithms: {', '.join(summary['algorithm_names'])}")
+    print(f"  • Evaluation Metrics: {summary['metrics_count']}")
+    print(f"  • Max Frames per Epoch: {summary['max_frames_per_epoch']}")
+    print(f"  • Max Epochs per Subject: {summary['max_epochs_per_subject']}")
+    print(f"  • Algorithm Comparison: {'Enabled' if summary['algorithm_comparison_enabled'] else 'Disabled'}")
     
     try:
         import psutil
         memory = psutil.virtual_memory()
-        print(f"  总内存: {memory.total / (1024**3):.1f} GB")
-        print(f"  可用内存: {memory.available / (1024**3):.1f} GB")
+        print(f"  • Total Memory: {memory.total / (1024**3):.1f} GB")
+        print(f"  • Available Memory: {memory.available / (1024**3):.1f} GB")
     except ImportError:
         pass
     
-    print("=" * 70)
+    print("=" * 80)
 
 def validate_config():
-    """验证配置参数"""
+    """Validate configuration parameters"""
     logger = logging.getLogger(__name__)
     
-    # 检查数据目录
+    # Check data directory
     if not os.path.exists(Config.DATA_ROOT):
-        error_msg = get_label('data_error', 
-                             f"数据目录不存在: {Config.DATA_ROOT}",
-                             f"Data directory not found: {Config.DATA_ROOT}")
+        error_msg = f"Data directory not found: {Config.DATA_ROOT}"
         logger.error(error_msg)
         print(f"\n❌ {error_msg}")
-        print(get_label('check_config', 
-                       "请检查config.py中的DATA_ROOT设置",
-                       "Please check DATA_ROOT setting in config.py"))
+        print("Please check DATA_ROOT setting in config.py")
         return False
     
-    # 验证算法配置
+    # Validate algorithm configuration
     validation_results = TrackerFactory.validate_algorithm_config(Config)
     invalid_algorithms = [alg for alg, valid in validation_results.items() if not valid]
     
     if invalid_algorithms:
-        logger.warning(f"以下算法配置无效: {invalid_algorithms}")
-        print(f"⚠️  以下算法配置可能有问题: {', '.join(invalid_algorithms)}")
+        logger.warning(f"Invalid algorithm configurations: {invalid_algorithms}")
+        print(f"⚠️  Potentially problematic algorithm configurations: {', '.join(invalid_algorithms)}")
     
-    # 检查可用算法
+    # Check available algorithms
     available = TrackerFactory.get_available_algorithms()
     missing = [alg for alg in Config.COMPARISON_ALGORITHMS if alg not in available]
     
     if missing:
-        logger.error(f"以下算法不可用: {missing}")
-        print(f"❌ 以下算法不可用: {', '.join(missing)}")
+        logger.error(f"Unavailable algorithms: {missing}")
+        print(f"❌ Unavailable algorithms: {', '.join(missing)}")
         return False
     
-    # 验证帧数配置
+    # Validate frame configuration
     if Config.MAX_FRAMES_PER_EPOCH <= 0:
-        logger.error(f"无效的最大帧数配置: {Config.MAX_FRAMES_PER_EPOCH}")
-        print(f"❌ 无效的最大帧数配置: {Config.MAX_FRAMES_PER_EPOCH}")
+        logger.error(f"Invalid max frames configuration: {Config.MAX_FRAMES_PER_EPOCH}")
+        print(f"❌ Invalid max frames configuration: {Config.MAX_FRAMES_PER_EPOCH}")
         return False
     
-    logger.info(f"配置验证完成，最大帧数限制: {Config.MAX_FRAMES_PER_EPOCH}")
+    logger.info(f"Configuration validation complete, max frames limit: {Config.MAX_FRAMES_PER_EPOCH}")
     return True
 
 def process_subject_with_multiple_algorithms(data_loader, topo_generator, analyzer, visualizer,
                                            subject_id, sessions, logger):
-    """使用多种算法处理单个被试的数据"""
+    """Process single subject data with multiple algorithms"""
     subject_results = {}
     
-    session_label = get_label('session_process', 
-                             f"处理被试 {subject_id} (共{len(sessions)}个session, {len(Config.COMPARISON_ALGORITHMS)}种算法)",
-                             f"Processing subject {subject_id} ({len(sessions)} sessions, {len(Config.COMPARISON_ALGORITHMS)} algorithms)")
-    logger.info(session_label)
+    logger.info(f"Processing subject {subject_id} ({len(sessions)} sessions, {len(Config.COMPARISON_ALGORITHMS)} algorithms)")
     
-    # 创建所有跟踪器
+    # Create all trackers
     trackers = TrackerFactory.create_all_trackers(Config)
     if not trackers:
-        logger.error(f"无法创建跟踪器")
+        logger.error(f"Unable to create trackers")
         return None
     
-    logger.info(f"成功创建 {len(trackers)} 个跟踪器: {', '.join(trackers.keys())}")
+    logger.info(f"Successfully created {len(trackers)} trackers: {', '.join(trackers.keys())}")
+    
+    session_progress = 0
+    total_sessions = len(sessions)
     
     for session_id, session_data in sessions.items():
+        session_progress += 1
         session_key = f"{subject_id}_{session_id}"
-        session_info = get_label('session_info', 
-                                f"  处理session {session_id}",
-                                f"  Processing session {session_id}")
-        logger.info(session_info)
+        logger.info(f"  Processing session {session_id} ({session_progress}/{total_sessions})")
         
         try:
             epochs = session_data['epochs']
             positions = session_data['positions']
             ch_names = epochs.ch_names
             
-            # 选择多个epoch进行分析
+            # Select multiple epochs for analysis
             n_epochs_to_analyze = min(len(epochs), Config.MAX_EPOCHS_PER_SUBJECT)
             
             session_algorithm_results = {}
             
+            epoch_progress = 0
             for epoch_idx in range(n_epochs_to_analyze):
+                epoch_progress += 1
+                
                 try:
                     epoch_data = epochs.get_data()[epoch_idx]
                     
-                    # 生成地形图序列
-                    epoch_info = get_label('epoch_topo', 
-                                          f"    生成epoch {epoch_idx+1} 地形图序列...",
-                                          f"    Generating epoch {epoch_idx+1} topographies...")
-                    logger.info(epoch_info)
+                    # Generate topography sequence
+                    logger.info(f"    Generating epoch {epoch_idx+1} topography sequence...")
                     
-                    # 使用配置参数限制时间点数量
+                    # Use configuration parameters to limit time points
                     max_time_points = min(epoch_data.shape[1], Config.MAX_FRAMES_PER_EPOCH)
                     epoch_data_subset = epoch_data[:, :max_time_points]
                     
-                    logger.info(f"    使用帧数限制: {Config.MAX_FRAMES_PER_EPOCH}, 实际处理: {max_time_points} 帧")
+                    logger.info(f"    Using frame limit: {Config.MAX_FRAMES_PER_EPOCH}, processing: {max_time_points} frames")
                     
                     topographies = topo_generator.generate_time_series_topographies(
                         epoch_data_subset[np.newaxis, :, :], positions, ch_names
                     )[0]
                     
                     if topographies is None or topographies.size == 0:
-                        logger.warning(f"    Epoch {epoch_idx+1}: 地形图生成失败")
+                        logger.warning(f"    Epoch {epoch_idx+1}: topography generation failed")
                         continue
                     
-                    # 标准化地形图
+                    # Normalize topographies
                     for t in range(topographies.shape[0]):
                         topographies[t] = topo_generator.normalize_topography(topographies[t])
                     
-                    # 使用每种算法进行轨迹跟踪
+                    # Use each algorithm for trajectory tracking
                     epoch_algorithm_results = {}
+                    algorithm_progress = 0
                     
                     for algorithm_name, tracker in trackers.items():
+                        algorithm_progress += 1
+                        
                         try:
-                            track_info = get_label('epoch_track',
-                                                  f"    使用{algorithm_name}算法跟踪epoch {epoch_idx+1}...",
-                                                  f"    Tracking epoch {epoch_idx+1} with {algorithm_name}...")
-                            logger.info(track_info)
+                            logger.info(f"    Tracking epoch {epoch_idx+1} with {algorithm_name} algorithm "
+                                      f"({algorithm_progress}/{len(trackers)})...")
                             
                             start_time = time.time()
                             tracking_results = tracker.track_sequence(topographies)
                             end_time = time.time()
                             
                             if not tracking_results or 'trajectories' not in tracking_results:
-                                logger.warning(f"    {algorithm_name}: Epoch {epoch_idx+1} 轨迹跟踪返回空结果")
+                                logger.warning(f"    {algorithm_name}: Epoch {epoch_idx+1} tracking returned empty results")
                                 continue
                             
                             trajectories = tracking_results['trajectories']
                             if not trajectories:
-                                logger.warning(f"    {algorithm_name}: Epoch {epoch_idx+1} 未检测到有效轨迹")
+                                logger.warning(f"    {algorithm_name}: Epoch {epoch_idx+1} no valid trajectories detected")
                                 continue
                             
-                            # 记录结果
+                            # Record results
                             epoch_algorithm_results[algorithm_name] = {
                                 'trajectories': trajectories,
                                 'metrics': tracking_results.get('metrics', {}),
                                 'summary': tracking_results.get('summary', {}),
                                 'computation_time': end_time - start_time,
-                                'processed_frames': topographies.shape[0]  # 新增：记录实际处理帧数
+                                'processed_frames': topographies.shape[0],
+                                'tracking_results': tracking_results  # Keep full results for visualization
                             }
                             
-                            found_info = get_label('found_traj',
-                                                  f"    {algorithm_name}: Epoch {epoch_idx+1} 找到 {len(trajectories)} 条轨迹 "
-                                                  f"(处理{topographies.shape[0]}帧, 耗时 {end_time - start_time:.2f}s)",
-                                                  f"    {algorithm_name}: Epoch {epoch_idx+1} found {len(trajectories)} trajectories "
-                                                  f"(processed {topographies.shape[0]} frames, time: {end_time - start_time:.2f}s)")
-                            logger.info(found_info)
+                            logger.info(f"    {algorithm_name}: Epoch {epoch_idx+1} found {len(trajectories)} trajectories "
+                                      f"(processed {topographies.shape[0]} frames, time: {end_time - start_time:.3f}s)")
                             
                         except Exception as e:
-                            logger.error(f"    {algorithm_name}: Epoch {epoch_idx+1} 轨迹跟踪失败: {e}")
+                            logger.error(f"    {algorithm_name}: Epoch {epoch_idx+1} tracking failed: {e}")
                             continue
                     
-                    # 如果有结果，保存epoch级别的对比
+                    # If results exist, save epoch-level comparisons
                     if epoch_algorithm_results:
-                        # 保存每种算法的代表性可视化
+                        # Save representative visualizations for each algorithm
                         for algorithm_name, results in epoch_algorithm_results.items():
                             trajectories = results['trajectories']
                             
-                            # 保存轨迹图
+                            # Save trajectory plot
                             traj_path = os.path.join(Config.RESULTS_ROOT, "trajectories", 
                                                    f"{session_key}_epoch{epoch_idx}_{algorithm_name}_trajectories.png")
                             try:
-                                title = get_label('traj_title',
-                                                f"被试{subject_id} Session{session_id} Epoch{epoch_idx} - {algorithm_name}算法 ({results['processed_frames']}帧)",
-                                                f"Subject {subject_id} Session {session_id} Epoch {epoch_idx} - {algorithm_name} Algorithm ({results['processed_frames']} frames)")
+                                title = f"Subject {subject_id} Session {session_id} Epoch {epoch_idx} - {algorithm_name.upper()} Algorithm ({results['processed_frames']} frames)"
                                 visualizer.plot_trajectories(
                                     trajectories, topographies.shape[1:],
                                     title=title,
                                     save_path=traj_path
                                 )
                             except Exception as e:
-                                logger.warning(f"保存{algorithm_name}轨迹图失败: {e}")
+                                logger.warning(f"Failed to save {algorithm_name} trajectory plot: {e}")
                         
-                        # 将epoch结果合并到session结果中
+                        # Merge epoch results into session results
                         for algorithm_name, results in epoch_algorithm_results.items():
                             if algorithm_name not in session_algorithm_results:
                                 session_algorithm_results[algorithm_name] = {
@@ -354,46 +316,46 @@ def process_subject_with_multiple_algorithms(data_loader, topo_generator, analyz
                                     'total_computation_time': 0,
                                     'epoch_count': 0,
                                     'metrics_sum': {},
-                                    'total_frames_processed': 0  # 新增
+                                    'total_frames_processed': 0
                                 }
                             
-                            # 合并轨迹（添加epoch前缀）
+                            # Merge trajectories (add epoch prefix)
                             for traj_id, traj_data in results['trajectories'].items():
                                 key = f"epoch{epoch_idx}_{traj_id}"
                                 session_algorithm_results[algorithm_name]['trajectories'][key] = traj_data
                             
-                            # 累计统计
+                            # Accumulate statistics
                             session_algorithm_results[algorithm_name]['total_computation_time'] += results['computation_time']
                             session_algorithm_results[algorithm_name]['epoch_count'] += 1
                             session_algorithm_results[algorithm_name]['total_frames_processed'] += results['processed_frames']
                             
-                            # 累计指标
+                            # Accumulate metrics
                             for metric, value in results.get('metrics', {}).items():
                                 if metric not in session_algorithm_results[algorithm_name]['metrics_sum']:
                                     session_algorithm_results[algorithm_name]['metrics_sum'][metric] = []
                                 session_algorithm_results[algorithm_name]['metrics_sum'][metric].append(value)
                     
-                    # 内存清理
+                    # Memory cleanup
                     del topographies
                     gc.collect()
                     
                 except Exception as e:
-                    logger.error(f"    Epoch {epoch_idx+1} 处理失败: {e}")
+                    logger.error(f"    Epoch {epoch_idx+1} processing failed: {e}")
                     continue
             
-            # 处理session级别的结果
+            # Process session-level results
             if session_algorithm_results:
-                # 计算平均指标
+                # Calculate average metrics
                 for algorithm_name in session_algorithm_results:
                     alg_result = session_algorithm_results[algorithm_name]
                     
-                    # 计算平均指标
+                    # Calculate average metrics
                     avg_metrics = {}
                     for metric, values in alg_result['metrics_sum'].items():
                         if values:
                             avg_metrics[metric] = np.mean(values)
                     
-                    # 更新结果
+                    # Update results
                     alg_result['average_metrics'] = avg_metrics
                     alg_result['total_trajectories'] = len(alg_result['trajectories'])
                     alg_result['avg_frames_per_epoch'] = alg_result['total_frames_processed'] / alg_result['epoch_count'] if alg_result['epoch_count'] > 0 else 0
@@ -402,34 +364,34 @@ def process_subject_with_multiple_algorithms(data_loader, topo_generator, analyz
                 
                 subject_results[session_id] = session_algorithm_results
                 
-                session_summary = get_label('session_summary',
-                                          f"  Session {session_id}: 算法对比完成",
-                                          f"  Session {session_id}: Algorithm comparison completed")
-                logger.info(session_summary)
+                logger.info(f"  Session {session_id}: algorithm comparison completed")
                 
-                # 显示各算法的简要结果
+                # Display brief results for each algorithm
                 for algorithm_name, alg_result in session_algorithm_results.items():
-                    logger.info(f"    {algorithm_name}: {alg_result['total_trajectories']} 条轨迹, "
-                              f"平均耗时 {alg_result['total_computation_time']/alg_result['epoch_count']:.2f}s, "
-                              f"平均处理 {alg_result['avg_frames_per_epoch']:.0f} 帧/epoch")
+                    logger.info(f"    {algorithm_name}: {alg_result['total_trajectories']} trajectories, "
+                              f"avg time {alg_result['total_computation_time']/alg_result['epoch_count']:.3f}s, "
+                              f"avg frames {alg_result['avg_frames_per_epoch']:.0f}/epoch")
             else:
-                logger.warning(f"  Session {session_id}: 所有算法均未找到有效轨迹")
+                logger.warning(f"  Session {session_id}: all algorithms failed to find valid trajectories")
                 
         except Exception as e:
-            logger.error(f"  处理session {session_id} 时出错: {e}")
+            logger.error(f"  Error processing session {session_id}: {e}")
             continue
     
     return subject_results if subject_results else None
 
-def create_algorithm_comparison_report(all_results, logger):
-    """创建算法对比报告"""
-    logger.info("生成算法对比报告...")
+def create_enhanced_summary_report(all_results, logger):
+    """Create enhanced summary report with detailed insights"""
+    logger.info("Generating enhanced summary report...")
     
     try:
-        # 收集所有算法的统计数据
+        # Collect comprehensive statistics
         algorithm_stats = {}
+        subject_performance = {}
         
         for subject_id, sessions in all_results.items():
+            subject_performance[subject_id] = {}
+            
             for session_id, session_data in sessions.items():
                 for algorithm_name, alg_data in session_data.items():
                     if algorithm_name not in algorithm_stats:
@@ -438,269 +400,175 @@ def create_algorithm_comparison_report(all_results, logger):
                             'computation_times': [],
                             'trajectory_lengths': [],
                             'trajectory_qualities': [],
-                            'frames_processed': []  # 新增
+                            'frames_processed': [],
+                            'sessions_processed': 0
                         }
                     
-                    # 收集统计数据
+                    # Collect statistics
                     algorithm_stats[algorithm_name]['total_trajectories'].append(alg_data['total_trajectories'])
                     algorithm_stats[algorithm_name]['computation_times'].append(alg_data['total_computation_time'])
                     algorithm_stats[algorithm_name]['frames_processed'].append(alg_data.get('total_frames_processed', 0))
+                    algorithm_stats[algorithm_name]['sessions_processed'] += 1
                     
-                    # 收集轨迹统计
+                    # Collect trajectory statistics
                     for traj_data in alg_data['trajectories'].values():
                         algorithm_stats[algorithm_name]['trajectory_lengths'].append(traj_data['length'])
                         algorithm_stats[algorithm_name]['trajectory_qualities'].append(traj_data.get('quality_score', 0))
+                    
+                    # Track subject performance
+                    if algorithm_name not in subject_performance[subject_id]:
+                        subject_performance[subject_id][algorithm_name] = {
+                            'total_trajectories': 0,
+                            'total_time': 0,
+                            'sessions': 0
+                        }
+                    
+                    subject_performance[subject_id][algorithm_name]['total_trajectories'] += alg_data['total_trajectories']
+                    subject_performance[subject_id][algorithm_name]['total_time'] += alg_data['total_computation_time']
+                    subject_performance[subject_id][algorithm_name]['sessions'] += 1
         
-        # 生成报告
+        # Generate enhanced report
         report = []
-        report.append("=" * 80)
-        report.append("EEG轨迹跟踪算法对比报告")
-        report.append("=" * 80)
-        report.append(f"实验时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        report.append(f"对比算法数量: {len(algorithm_stats)}")
-        report.append(f"处理被试数量: {len(all_results)}")
-        report.append(f"帧数限制设置: {Config.MAX_FRAMES_PER_EPOCH} 帧/epoch")  # 新增
+        report.append("=" * 100)
+        report.append("ENHANCED EEG TRAJECTORY TRACKING ALGORITHM COMPARISON REPORT")
+        report.append("=" * 100)
+        report.append(f"Experiment Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"Total Subjects Processed: {len(all_results)}")
+        report.append(f"Total Sessions Analyzed: {sum(len(sessions) for sessions in all_results.values())}")
+        report.append(f"Algorithms Compared: {len(algorithm_stats)}")
+        report.append(f"Frame Limit Configuration: {Config.MAX_FRAMES_PER_EPOCH} frames/epoch")
         report.append("")
         
-        # 算法性能汇总
-        report.append("算法性能汇总:")
-        report.append("-" * 50)
+        # Executive Summary
+        report.append("EXECUTIVE SUMMARY")
+        report.append("=" * 50)
         
-        performance_ranking = []
+        best_performers = {}
+        for category in ['total_trajectories', 'computation_times', 'trajectory_qualities']:
+            if category == 'computation_times':
+                # Lower is better for computation time
+                best_alg = min(algorithm_stats.items(), 
+                             key=lambda x: np.mean(x[1][category]) if x[1][category] else float('inf'))
+                best_performers[category] = (best_alg[0], np.mean(best_alg[1][category]))
+            else:
+                # Higher is better for other metrics
+                best_alg = max(algorithm_stats.items(), 
+                             key=lambda x: np.mean(x[1][category]) if x[1][category] else 0)
+                best_performers[category] = (best_alg[0], np.mean(best_alg[1][category]))
+        
+        report.append(f"🏆 Most Trajectories Detected: {best_performers['total_trajectories'][0].upper()} "
+                     f"({best_performers['total_trajectories'][1]:.1f} avg)")
+        report.append(f"⚡ Fastest Processing: {best_performers['computation_times'][0].upper()} "
+                     f"({best_performers['computation_times'][1]:.4f}s avg)")
+        report.append(f"🎯 Highest Quality: {best_performers['trajectory_qualities'][0].upper()} "
+                     f"({best_performers['trajectory_qualities'][1]:.3f} avg quality)")
+        report.append("")
+        
+        # Detailed Algorithm Performance
+        report.append("DETAILED ALGORITHM PERFORMANCE ANALYSIS")
+        report.append("=" * 60)
         
         for algorithm_name, stats in algorithm_stats.items():
             if not stats['total_trajectories']:
                 continue
             
             avg_trajectories = np.mean(stats['total_trajectories'])
+            std_trajectories = np.std(stats['total_trajectories'])
             avg_time = np.mean(stats['computation_times'])
-            avg_length = np.mean(stats['trajectory_lengths']) if stats['trajectory_lengths'] else 0
+            std_time = np.std(stats['computation_times'])
             avg_quality = np.mean(stats['trajectory_qualities']) if stats['trajectory_qualities'] else 0
+            std_quality = np.std(stats['trajectory_qualities']) if stats['trajectory_qualities'] else 0
+            avg_length = np.mean(stats['trajectory_lengths']) if stats['trajectory_lengths'] else 0
             avg_frames = np.mean(stats['frames_processed']) if stats['frames_processed'] else 0
             
-            # 计算综合性能分数
-            performance_score = (avg_trajectories * 0.3 + 
-                               avg_length * 0.25 + 
-                               avg_quality * 0.25 + 
-                               (10 / max(avg_time, 0.1)) * 0.2)  # 时间越短分数越高
+            # Calculate efficiency and consistency
+            efficiency = avg_trajectories / max(avg_time, 1e-6)
+            time_consistency = 1.0 / (1.0 + std_time / max(avg_time, 1e-6))
+            quality_consistency = 1.0 / (1.0 + std_quality / max(avg_quality, 1e-6)) if avg_quality > 0 else 0
             
-            performance_ranking.append((algorithm_name, performance_score, {
-                'avg_trajectories': avg_trajectories,
-                'avg_time': avg_time,
-                'avg_length': avg_length,
-                'avg_quality': avg_quality,
-                'avg_frames': avg_frames
-            }))
+            report.append(f"\n{algorithm_name.upper()} ALGORITHM ANALYSIS:")
+            report.append("-" * (len(algorithm_name) + 20))
+            report.append(f"  Sessions Processed: {stats['sessions_processed']}")
+            report.append(f"  Average Trajectories: {avg_trajectories:.2f} ± {std_trajectories:.2f}")
+            report.append(f"  Average Processing Time: {avg_time:.4f}s ± {std_time:.4f}s")
+            report.append(f"  Average Trajectory Quality: {avg_quality:.3f} ± {std_quality:.3f}")
+            report.append(f"  Average Trajectory Length: {avg_length:.1f} frames")
+            report.append(f"  Average Frames Processed: {avg_frames:.0f}/session")
+            report.append(f"  Processing Efficiency: {efficiency:.1f} trajectories/second")
+            report.append(f"  Time Consistency: {time_consistency:.3f}")
+            report.append(f"  Quality Consistency: {quality_consistency:.3f}")
             
-            report.append(f"\n{algorithm_name.upper()} 算法:")
-            report.append(f"  平均轨迹数量: {avg_trajectories:.2f}")
-            report.append(f"  平均计算时间: {avg_time:.3f}s")
-            report.append(f"  平均轨迹长度: {avg_length:.1f} 帧")
-            report.append(f"  平均轨迹质量: {avg_quality:.3f}")
-            report.append(f"  平均处理帧数: {avg_frames:.0f} 帧")  # 新增
-            report.append(f"  综合性能分数: {performance_score:.3f}")
-        
-        # 算法排名
-        performance_ranking.sort(key=lambda x: x[1], reverse=True)
-        
-        report.append("\n算法性能排名:")
-        report.append("-" * 30)
-        
-        for i, (algorithm_name, score, details) in enumerate(performance_ranking, 1):
-            report.append(f"{i}. {algorithm_name.upper()}: {score:.3f}")
-            if i == 1:
-                report.append("   🏆 综合性能最佳")
-        
-        # 算法特色分析
-        report.append("\n算法特色分析:")
-        report.append("-" * 30)
-        
-        if performance_ranking:
-            # 最多轨迹
-            max_traj_alg = max(performance_ranking, key=lambda x: x[2]['avg_trajectories'])
-            report.append(f"检测能力最强: {max_traj_alg[0]} ({max_traj_alg[2]['avg_trajectories']:.1f} 条平均轨迹)")
+            # Performance rating
+            if efficiency > 10 and avg_quality > 0.7 and time_consistency > 0.8:
+                rating = "EXCELLENT"
+            elif efficiency > 5 and avg_quality > 0.5 and time_consistency > 0.6:
+                rating = "GOOD"
+            elif efficiency > 2 and avg_quality > 0.3:
+                rating = "FAIR"
+            else:
+                rating = "NEEDS_IMPROVEMENT"
             
-            # 最快速度
-            min_time_alg = min(performance_ranking, key=lambda x: x[2]['avg_time'])
-            report.append(f"计算速度最快: {min_time_alg[0]} ({min_time_alg[2]['avg_time']:.3f}s 平均时间)")
-            
-            # 最高质量
-            max_quality_alg = max(performance_ranking, key=lambda x: x[2]['avg_quality'])
-            report.append(f"轨迹质量最高: {max_quality_alg[0]} ({max_quality_alg[2]['avg_quality']:.3f} 平均质量)")
-            
-            # 最长轨迹
-            max_length_alg = max(performance_ranking, key=lambda x: x[2]['avg_length'])
-            report.append(f"跟踪持续最长: {max_length_alg[0]} ({max_length_alg[2]['avg_length']:.1f} 帧平均长度)")
+            report.append(f"  Overall Rating: {rating}")
         
-        # 使用建议
-        report.append("\n使用建议:")
-        report.append("-" * 20)
+        # Subject-wise Performance Analysis
+        report.append(f"\n\nSUBJECT-WISE PERFORMANCE SUMMARY")
+        report.append("=" * 50)
         
-        if performance_ranking:
-            best_overall = performance_ranking[0][0]
-            report.append(f"• 综合推荐: {best_overall} (综合性能最佳)")
+        for subject_id, subject_data in subject_performance.items():
+            report.append(f"\nSubject {subject_id}:")
             
-            # 针对不同需求的推荐
-            if len(performance_ranking) > 1:
-                fastest = min(performance_ranking, key=lambda x: x[2]['avg_time'])[0]
-                highest_quality = max(performance_ranking, key=lambda x: x[2]['avg_quality'])[0]
-                most_trajectories = max(performance_ranking, key=lambda x: x[2]['avg_trajectories'])[0]
+            for algorithm_name, perf_data in subject_data.items():
+                avg_traj_per_session = perf_data['total_trajectories'] / max(perf_data['sessions'], 1)
+                avg_time_per_session = perf_data['total_time'] / max(perf_data['sessions'], 1)
                 
-                report.append(f"• 实时处理推荐: {fastest} (速度优先)")
-                report.append(f"• 高精度分析推荐: {highest_quality} (质量优先)")
-                report.append(f"• 复杂场景推荐: {most_trajectories} (检测能力优先)")
+                report.append(f"  {algorithm_name}: {avg_traj_per_session:.1f} traj/session, "
+                             f"{avg_time_per_session:.3f}s/session")
         
-        # 参数配置信息
-        report.append("\n当前参数配置:")
-        report.append("-" * 30)
-        report.append(f"• 最大帧数限制: {Config.MAX_FRAMES_PER_EPOCH} 帧/epoch")
-        report.append(f"• 最大被试数: {Config.MAX_SUBJECTS}")
-        report.append(f"• 最大epoch数: {Config.MAX_EPOCHS_PER_SUBJECT}")
-        report.append(f"• 阈值百分位: {Config.THRESHOLD_PERCENTILE}%")
-        report.append("")
+        # Recommendations
+        report.append(f"\n\nRECOMMENDATIONS & INSIGHTS")
+        report.append("=" * 50)
         
-        # 保存报告
-        report_text = "\n".join(report)
-        report_path = os.path.join(Config.RESULTS_ROOT, "algorithm_comparison", "comparison_report.txt")
-        os.makedirs(os.path.dirname(report_path), exist_ok=True)
+        # Performance-based recommendations
+        fastest_alg = best_performers['computation_times'][0]
+        most_accurate_alg = best_performers['trajectory_qualities'][0]
+        most_sensitive_alg = best_performers['total_trajectories'][0]
         
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write(report_text)
+        report.append("Algorithm Selection Guidelines:")
+        report.append(f"• For Real-time Applications: {fastest_alg.upper()} (fastest processing)")
+        report.append(f"• For High-precision Analysis: {most_accurate_alg.upper()} (highest quality)")
+        report.append(f"• For Maximum Detection: {most_sensitive_alg.upper()} (most trajectories)")
         
-        logger.info(f"算法对比报告已保存: {report_path}")
+        report.append("\nPerformance Optimization Insights:")
+        total_sessions = sum(stats['sessions_processed'] for stats in algorithm_stats.values())
+        if total_sessions > 0:
+            avg_processing_time = np.mean([np.mean(stats['computation_times']) 
+                                         for stats in algorithm_stats.values() 
+                                         if stats['computation_times']])
+            
+            report.append(f"• Average processing time across all algorithms: {avg_processing_time:.3f}s")
+            report.append(f"• Frame processing efficiency varies by algorithm (see detailed analysis)")
+            report.append(f"• Quality-speed trade-off is evident across different algorithms")
         
-        # 显示报告预览
-        print("\n" + "="*60)
-        print("算法对比报告预览:")
-        print("="*60)
-        preview_lines = report_text.split('\n')[:30]  # 显示前30行
-        print('\n'.join(preview_lines))
-        if len(report) > 30:
-            print("\n... (完整报告请查看文件)")
-        print("="*60)
+        # Configuration insights
+        report.append(f"\nConfiguration Impact Analysis:")
+        report.append(f"• Frame limit setting ({Config.MAX_FRAMES_PER_EPOCH} frames/epoch) affects:")
+        report.append(f"  - Processing speed (lower = faster)")
+        report.append(f"  - Memory usage (lower = less memory)")
+        report.append(f"  - Trajectory completeness (higher = more complete)")
         
-        return algorithm_stats, performance_ranking
+        report.append("\nGeneral Insights:")
+        report.append("• Algorithm performance may vary significantly with different EEG data characteristics")
+        report.append("• Consider data-specific parameter tuning for optimal results")
+        report.append("• Multiple algorithm approaches provide robust analysis framework")
+        
+        return "\n".join(report)
         
     except Exception as e:
-        logger.error(f"生成算法对比报告失败: {e}")
-        return {}, []
-
-def create_algorithm_comparison_visualizations(all_results, algorithm_stats, performance_ranking, visualizer, logger):
-    """创建算法对比可视化"""
-    logger.info("生成算法对比可视化...")
-    
-    try:
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        
-        comparison_dir = os.path.join(Config.RESULTS_ROOT, "algorithm_comparison")
-        os.makedirs(comparison_dir, exist_ok=True)
-        
-        # 1. 算法性能对比柱状图
-        if algorithm_stats and performance_ranking:
-            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-            fig.suptitle('算法性能对比分析', fontsize=16, fontweight='bold')
-            
-            algorithms = [item[0] for item in performance_ranking]
-            
-            # 轨迹数量对比
-            ax = axes[0, 0]
-            traj_counts = [np.mean(algorithm_stats[alg]['total_trajectories']) for alg in algorithms]
-            bars = ax.bar(algorithms, traj_counts, color='skyblue', alpha=0.7)
-            ax.set_title('平均轨迹数量对比')
-            ax.set_ylabel('轨迹数量')
-            ax.tick_params(axis='x', rotation=45)
-            
-            for bar, count in zip(bars, traj_counts):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                       f'{count:.1f}', ha='center', va='bottom')
-            
-            # 计算时间对比
-            ax = axes[0, 1]
-            comp_times = [np.mean(algorithm_stats[alg]['computation_times']) for alg in algorithms]
-            bars = ax.bar(algorithms, comp_times, color='lightgreen', alpha=0.7)
-            ax.set_title('平均计算时间对比')
-            ax.set_ylabel('时间 (秒)')
-            ax.tick_params(axis='x', rotation=45)
-            
-            for bar, time in zip(bars, comp_times):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-                       f'{time:.2f}s', ha='center', va='bottom')
-            
-            # 轨迹长度对比
-            ax = axes[1, 0]
-            traj_lengths = [np.mean(algorithm_stats[alg]['trajectory_lengths']) if algorithm_stats[alg]['trajectory_lengths'] else 0 
-                           for alg in algorithms]
-            bars = ax.bar(algorithms, traj_lengths, color='orange', alpha=0.7)
-            ax.set_title('平均轨迹长度对比')
-            ax.set_ylabel('长度 (帧)')
-            ax.tick_params(axis='x', rotation=45)
-            
-            for bar, length in zip(bars, traj_lengths):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                       f'{length:.1f}', ha='center', va='bottom')
-            
-            # 综合性能分数
-            ax = axes[1, 1]
-            performance_scores = [item[1] for item in performance_ranking]
-            bars = ax.bar(algorithms, performance_scores, color='coral', alpha=0.7)
-            ax.set_title('综合性能分数')
-            ax.set_ylabel('性能分数')
-            ax.tick_params(axis='x', rotation=45)
-            
-            for bar, score in zip(bars, performance_scores):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                       f'{score:.2f}', ha='center', va='bottom')
-            
-            plt.tight_layout()
-            comparison_path = os.path.join(comparison_dir, "algorithm_performance_comparison.png")
-            plt.savefig(comparison_path, dpi=300, bbox_inches='tight')
-            plt.close()
-            
-            logger.info(f"性能对比图已保存: {comparison_path}")
-            
-        # 2. 算法特征雷达图
-        if len(performance_ranking) >= 2:
-            fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(projection='polar'))
-            
-            # 准备数据
-            metrics = ['轨迹数量', '计算速度', '轨迹长度', '轨迹质量']
-            colors = ['red', 'blue', 'green', 'orange', 'purple']
-            
-            for i, (algorithm_name, _, details) in enumerate(performance_ranking[:5]):  # 最多显示5个算法
-                values = [
-                    details['avg_trajectories'] / max([d[2]['avg_trajectories'] for d in performance_ranking]),  # 标准化
-                    (10 / max(details['avg_time'], 0.1)) / max([10 / max(d[2]['avg_time'], 0.1) for d in performance_ranking]),  # 速度越快越好
-                    details['avg_length'] / max([d[2]['avg_length'] for d in performance_ranking]),
-                    details['avg_quality'] / max([d[2]['avg_quality'] for d in performance_ranking]) if max([d[2]['avg_quality'] for d in performance_ranking]) > 0 else 0
-                ]
-                
-                angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-                values += values[:1]  # 闭合图形
-                angles += angles[:1]
-                
-                ax.plot(angles, values, 'o-', linewidth=2, label=algorithm_name, color=colors[i % len(colors)])
-                ax.fill(angles, values, alpha=0.25, color=colors[i % len(colors)])
-            
-            ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(metrics)
-            ax.set_ylim(0, 1)
-            ax.set_title('算法性能雷达图', size=16, fontweight='bold', pad=20)
-            ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.0))
-            
-            radar_path = os.path.join(comparison_dir, "algorithm_radar_chart.png")
-            plt.savefig(radar_path, dpi=300, bbox_inches='tight')
-            plt.close()
-            
-            logger.info(f"算法雷达图已保存: {radar_path}")
-        
-        logger.info("算法对比可视化完成")
-        
-    except Exception as e:
-        logger.error(f"生成可视化失败: {e}")
+        logger.error(f"Enhanced summary report generation failed: {e}")
+        return "Enhanced summary report generation failed. Please check logs for details."
 
 def cleanup_memory():
-    """清理内存"""
+    """Clean up memory"""
     gc.collect()
     
     try:
@@ -711,7 +579,7 @@ def cleanup_memory():
         
         if memory_mb > Config.MEMORY_LIMIT_MB:
             logging.getLogger(__name__).warning(
-                f"内存使用量过高: {memory_mb:.1f} MB (限制: {Config.MEMORY_LIMIT_MB} MB)"
+                f"High memory usage: {memory_mb:.1f} MB (limit: {Config.MEMORY_LIMIT_MB} MB)"
             )
             return False
     except ImportError:
@@ -719,127 +587,133 @@ def cleanup_memory():
     
     return True
 
-def print_final_summary(all_results, algorithm_stats):
-    """打印最终总结"""
-    print("\n" + "="*70)
-    print("算法对比实验完成总结")
-    print("="*70)
+def print_final_summary(all_results, enhanced_comparison_results):
+    """Print final experiment summary"""
+    print("\n" + "="*80)
+    print("ENHANCED ALGORITHM COMPARISON EXPERIMENT SUMMARY")
+    print("="*80)
     
-    # 基本统计
+    # Basic statistics
     n_subjects = len(all_results)
     total_sessions = sum(len(sessions) for sessions in all_results.values())
     
-    print(f"✓ 成功处理被试数量: {n_subjects}")
-    print(f"✓ 总session数量: {total_sessions}")
-    print(f"✓ 对比算法数量: {len(algorithm_stats)}")
-    print(f"✓ 算法列表: {', '.join(algorithm_stats.keys())}")
-    print(f"✓ 帧数限制设置: {Config.MAX_FRAMES_PER_EPOCH} 帧/epoch")
+    print(f"✓ Successfully Processed:")
+    print(f"  • Subjects: {n_subjects}")
+    print(f"  • Total Sessions: {total_sessions}")
+    print(f"  • Frame Limit: {Config.MAX_FRAMES_PER_EPOCH} frames/epoch")
     
-    # 显示各算法的总体表现
-    print(f"\n各算法总体表现:")
-    for algorithm_name, stats in algorithm_stats.items():
-        if stats['total_trajectories']:
-            avg_trajectories = np.mean(stats['total_trajectories'])
-            avg_time = np.mean(stats['computation_times'])
-            avg_frames = np.mean(stats['frames_processed']) if stats['frames_processed'] else 0
-            print(f"  {algorithm_name}: 平均{avg_trajectories:.1f}条轨迹, 平均耗时{avg_time:.2f}s, 平均处理{avg_frames:.0f}帧")
+    if enhanced_comparison_results:
+        metrics = enhanced_comparison_results['comprehensive_metrics']
+        print(f"  • Algorithms Compared: {len(metrics)}")
+        print(f"  • Algorithm List: {', '.join(metrics.keys())}")
+        
+        # Show top performers
+        if metrics:
+            best_overall = max(metrics.items(), key=lambda x: x[1]['composite_performance_score'])
+            fastest = min(metrics.items(), key=lambda x: x[1]['avg_computation_times'])
+            highest_quality = max(metrics.items(), key=lambda x: x[1]['avg_quality_scores'])
+            
+            print(f"\n🏆 Top Performers:")
+            print(f"  • Best Overall: {best_overall[0].upper()} (Score: {best_overall[1]['composite_performance_score']:.3f})")
+            print(f"  • Fastest: {fastest[0].upper()} ({fastest[1]['avg_computation_times']:.4f}s)")
+            print(f"  • Highest Quality: {highest_quality[0].upper()} (Score: {highest_quality[1]['avg_quality_scores']:.3f})")
     
-    # 输出路径
-    print(f"\n结果保存位置:")
-    print(f"  📁 轨迹图对比: {os.path.join(Config.RESULTS_ROOT, 'trajectories')}")
-    print(f"  📊 算法对比图: {os.path.join(Config.RESULTS_ROOT, 'algorithm_comparison')}")
-    print(f"  📄 对比报告: {os.path.join(Config.RESULTS_ROOT, 'algorithm_comparison', 'comparison_report.txt')}")
+    # Output locations
+    print(f"\n📂 Results Saved To:")
+    print(f"  • Trajectory Plots: {os.path.join(Config.RESULTS_ROOT, 'trajectories')}")
+    print(f"  • Algorithm Comparison: {os.path.join(Config.RESULTS_ROOT, 'algorithm_comparison')}")
     
-    print("="*70)
-    print("🎉 算法对比实验成功完成！")
-    print("="*70)
+    if enhanced_comparison_results:
+        print(f"  • Detailed Report: {enhanced_comparison_results['report_path']}")
+        print(f"  • Visualization Suite: {enhanced_comparison_results['visualization_dir']}")
+        print(f"  • CSV Data: {enhanced_comparison_results['csv_path']}")
+    
+    print("="*80)
+    print("🎉 Enhanced Algorithm Comparison Experiment Complete!")
+    print("="*80)
 
 def main():
-    """主实验流程"""
-    parser = argparse.ArgumentParser(description='EEG Trajectory Analysis System with Algorithm Comparison')
+    """Main experiment workflow"""
+    parser = argparse.ArgumentParser(description='Enhanced EEG Trajectory Analysis with Algorithm Comparison')
     parser.add_argument('--subjects', type=int, default=None, 
                        help='Maximum number of subjects to process')
     parser.add_argument('--epochs', type=int, default=None,
                        help='Maximum epochs per subject')
     parser.add_argument('--frames', type=int, default=None,
-                       help='Maximum frames per epoch')  # 新增参数
+                       help='Maximum frames per epoch')
     parser.add_argument('--algorithms', nargs='+', default=None,
                        help='Algorithms to compare', choices=Config.COMPARISON_ALGORITHMS)
     parser.add_argument('--disable-comparison', action='store_true',
                        help='Disable algorithm comparison (use greedy only)')
+    parser.add_argument('--fast-mode', action='store_true',
+                       help='Enable fast mode (reduced frames and epochs)')
     
     args = parser.parse_args()
     
-    # 打印系统信息
+    # Fast mode configuration
+    if args.fast_mode:
+        Config.set_max_frames(100, 'epoch')
+        Config.MAX_EPOCHS_PER_SUBJECT = 1
+        Config.MAX_SUBJECTS = 3
+        print("🚀 Fast mode enabled: reduced processing for quick testing")
+    
+    # Print system information
     print_system_info()
     
-    # 检查依赖
+    # Check dependencies
     if not check_dependencies():
         return 1
     
-    # 设置日志
+    # Set up logging
     logger = setup_logging()
-    start_msg = get_label('start_experiment',
-                         "开始EEG脑电地形图运动轨迹分析实验 - 算法对比版",
-                         "Starting EEG topography motion trajectory analysis experiment - Algorithm Comparison Edition")
-    logger.info(start_msg)
+    logger.info("Starting Enhanced EEG Topography Motion Trajectory Analysis Experiment")
     
     try:
-        # 验证配置
+        # Validate configuration
         if not validate_config():
             return 1
         
-        # 应用命令行参数
+        # Apply command line arguments
         if args.subjects:
             Config.MAX_SUBJECTS = args.subjects
         if args.epochs:
             Config.MAX_EPOCHS_PER_SUBJECT = args.epochs
-        if args.frames:  # 新增：动态设置帧数限制
+        if args.frames:
             Config.set_max_frames(args.frames, 'epoch')
-            logger.info(f"帧数限制已设置为: {args.frames}")
+            logger.info(f"Frame limit set to: {args.frames}")
         if args.algorithms:
             Config.COMPARISON_ALGORITHMS = args.algorithms
         if args.disable_comparison:
             Config.ENABLE_ALGORITHM_COMPARISON = False
             Config.COMPARISON_ALGORITHMS = ['greedy']
         
-        # 初始化组件
-        init_msg = get_label('init_components', 
-                            "初始化分析组件...",
-                            "Initializing analysis components...")
-        logger.info(init_msg)
+        # Initialize components
+        logger.info("Initializing enhanced analysis components...")
         
         data_loader = EEGDataLoader(Config.DATA_ROOT, Config)
         topo_generator = TopographyGenerator(Config)
         analyzer = TrajectoryAnalyzer(Config)
         visualizer = Visualizer(Config)
         
-        # 加载数据
-        load_msg = get_label('load_data',
-                            "开始加载EEG数据...",
-                            "Starting to load EEG data...")
-        logger.info(load_msg)
+        # Load data
+        logger.info("Loading EEG data...")
         all_data = data_loader.load_all_subjects(Config.MAX_SUBJECTS)
         
         if not all_data:
-            error_msg = get_label('no_data',
-                                 "未能加载任何EEG数据，请检查数据路径和格式",
-                                 "Failed to load any EEG data, please check data path and format")
-            logger.error(error_msg)
-            print(f"\n❌ {error_msg}")
+            logger.error("Failed to load any EEG data, please check data path and format")
+            print("\n❌ Failed to load any EEG data, please check data path and format")
             return 1
         
-        success_msg = get_label('load_success',
-                               f"成功加载 {len(all_data)} 个被试的数据",
-                               f"Successfully loaded data from {len(all_data)} subjects")
-        logger.info(success_msg)
+        logger.info(f"Successfully loaded data from {len(all_data)} subjects")
         
-        # 存储所有结果
+        # Store all results
         all_results = {}
         
-        # 处理每个被试
+        # Process each subject
         total_subjects = len(all_data)
         processed_subjects = 0
+        
+        print(f"\n🔄 Processing {total_subjects} subjects with {len(Config.COMPARISON_ALGORITHMS)} algorithms...")
         
         for subject_id, sessions in tqdm(all_data.items(), desc="Processing subjects"):
             try:
@@ -849,84 +723,83 @@ def main():
                         subject_id, sessions, logger
                     )
                 else:
-                    # 使用原有的单算法处理逻辑（这里可以调用原来的process_subject_data函数）
-                    logger.info("使用单算法模式（greedy）")
-                    # 这里可以添加原有的处理逻辑
+                    logger.info("Using single algorithm mode (greedy)")
                     subject_results = None
                 
                 if subject_results:
                     all_results[subject_id] = subject_results
                     processed_subjects += 1
                     
-                    # 定期清理内存
+                    # Periodic memory cleanup
                     if processed_subjects % 2 == 0:
                         cleanup_memory()
-                        progress_msg = get_label('progress',
-                                               f"已处理 {processed_subjects}/{total_subjects} 个被试",
-                                               f"Processed {processed_subjects}/{total_subjects} subjects")
-                        logger.info(progress_msg)
+                        logger.info(f"Processed {processed_subjects}/{total_subjects} subjects")
                 else:
-                    no_result_msg = get_label('no_result',
-                                            f"被试 {subject_id} 未产生有效结果",
-                                            f"Subject {subject_id} produced no valid results")
-                    logger.warning(no_result_msg)
+                    logger.warning(f"Subject {subject_id} produced no valid results")
                     
             except Exception as e:
-                logger.error(f"处理被试 {subject_id} 时出现严重错误: {e}")
+                logger.error(f"Serious error processing subject {subject_id}: {e}")
                 continue
         
         if processed_subjects == 0:
-            no_subjects_msg = get_label('no_subjects',
-                                       "没有成功处理任何被试数据",
-                                       "No subject data was successfully processed")
-            logger.error(no_subjects_msg)
-            print(f"\n❌ {no_subjects_msg}")
+            logger.error("No subject data was successfully processed")
+            print("\n❌ No subject data was successfully processed")
             return 1
         
-        complete_msg = get_label('data_complete',
-                                f"数据处理完成，成功处理 {processed_subjects} 个被试",
-                                f"Data processing complete, successfully processed {processed_subjects} subjects")
-        logger.info(complete_msg)
+        logger.info(f"Data processing complete, successfully processed {processed_subjects} subjects")
         
-        # 生成算法对比报告和可视化
+        # Generate enhanced algorithm comparison and visualizations
+        enhanced_comparison_results = None
         if Config.ENABLE_ALGORITHM_COMPARISON and all_results:
-            algorithm_stats, performance_ranking = create_algorithm_comparison_report(all_results, logger)
-            create_algorithm_comparison_visualizations(all_results, algorithm_stats, performance_ranking, visualizer, logger)
+            print("\n📊 Running enhanced algorithm comparison analysis...")
+            # 🔧 FIXED: Correct parameter order
+            enhanced_comparison_results = run_enhanced_algorithm_comparison(Config, all_results, visualizer)
             
-            # 打印最终总结
-            print_final_summary(all_results, algorithm_stats)
+            if enhanced_comparison_results:
+                # Create enhanced summary report
+                enhanced_report = create_enhanced_summary_report(all_results, logger)
+                
+                # Save enhanced report
+                enhanced_report_path = os.path.join(Config.RESULTS_ROOT, "enhanced_experiment_summary.txt")
+                with open(enhanced_report_path, 'w', encoding='utf-8') as f:
+                    f.write(enhanced_report)
+                
+                logger.info(f"Enhanced summary report saved: {enhanced_report_path}")
+                
+                # Create overall summary visualization
+                summary_viz_path = os.path.join(Config.RESULTS_ROOT, "experiment_summary.png")
+                visualizer.create_summary_visualization(all_results, summary_viz_path)
         else:
-            logger.info("算法对比已禁用或无有效结果")
+            logger.info("Algorithm comparison disabled or no valid results")
         
-        # 保存完整结果
-        results_path = os.path.join(Config.RESULTS_ROOT, "algorithm_comparison_results.pkl")
+        # Save complete results
+        results_path = os.path.join(Config.RESULTS_ROOT, "complete_experiment_results.pkl")
         try:
             with open(results_path, 'wb') as f:
-                pickle.dump(all_results, f, protocol=pickle.HIGHEST_PROTOCOL)
-            logger.info(f"完整结果已保存: {results_path}")
+                pickle.dump({
+                    'experiment_results': all_results,
+                    'enhanced_comparison': enhanced_comparison_results,
+                    'config_summary': Config.get_config_summary(),
+                    'experiment_summary': Config.get_experiment_summary()
+                }, f, protocol=pickle.HIGHEST_PROTOCOL)
+            logger.info(f"Complete results saved: {results_path}")
         except Exception as e:
-            logger.error(f"保存完整结果失败: {e}")
+            logger.error(f"Failed to save complete results: {e}")
         
-        success_final = get_label('success_final',
-                                 "算法对比实验成功完成!",
-                                 "Algorithm comparison experiment completed successfully!")
-        logger.info(success_final)
+        # Print final summary
+        print_final_summary(all_results, enhanced_comparison_results)
+        
+        logger.info("Enhanced algorithm comparison experiment completed successfully!")
         return 0
         
     except KeyboardInterrupt:
-        interrupt_msg = get_label('interrupted',
-                                 "用户中断了实验",
-                                 "Experiment was interrupted by user")
-        logger.info(interrupt_msg)
-        print(f"\n🛑 {interrupt_msg}")
+        logger.info("Experiment was interrupted by user")
+        print("\n🛑 Experiment was interrupted by user")
         return 130
         
     except Exception as e:
-        error_final = get_label('unexpected_error',
-                               f"实验过程中发生未预期的错误: {e}",
-                               f"Unexpected error during experiment: {e}")
-        logger.error(error_final)
-        print(f"\n❌ {error_final}")
+        logger.error(f"Unexpected error during experiment: {e}")
+        print(f"\n❌ Unexpected error during experiment: {e}")
         return 1
         
     finally:
